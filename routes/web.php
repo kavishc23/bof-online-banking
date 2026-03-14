@@ -56,10 +56,35 @@ Route::post('/login', function (Request $request) {
         }
     }
 
+    $transactions = [];
+
+    if ($matchedCustomer && !empty($matchedCustomer['accounts'])) {
+        $accountIds = array_map(function ($account) {
+            return $account['id'];
+        }, $matchedCustomer['accounts']);
+
+        $transactionResponse = Http::withToken($jwt)->get(
+            'http://localhost:1337/api/transactions?populate=*'
+        );
+
+        $transactionRows = $transactionResponse->json()['data'] ?? [];
+
+        foreach ($transactionRows as $transaction) {
+            if (
+                isset($transaction['account']) &&
+                isset($transaction['account']['id']) &&
+                in_array($transaction['account']['id'], $accountIds)
+            ) {
+                $transactions[] = $transaction;
+            }
+        }
+    }
+
     session([
         'jwt' => $jwt,
         'user' => $user,
         'customer' => $matchedCustomer,
+        'transactions' => $transactions,
     ]);
 
     return redirect('/dashboard');
@@ -73,11 +98,12 @@ Route::get('/dashboard', function () {
     return view('dashboard', [
         'user' => session('user'),
         'customer' => session('customer'),
+        'transactions' => session('transactions', []),
     ]);
 })->name('dashboard');
 
 Route::post('/logout', function (Request $request) {
-    session()->forget(['jwt', 'user', 'customer']);
+    session()->forget(['jwt', 'user', 'customer', 'transactions']);
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 

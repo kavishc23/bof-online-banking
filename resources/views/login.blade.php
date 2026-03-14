@@ -5,106 +5,129 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoF Online Banking Login</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background: #f4f7fb;
             margin: 0;
-            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0f2b5b, #1d4ed8);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .login-container {
-            width: 400px;
-            margin: 80px auto;
+        .login-card {
+            width: 100%;
+            max-width: 430px;
             background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            padding: 35px 30px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.18);
         }
 
-        h1 {
+        .brand {
             text-align: center;
-            color: #1d3557;
-            margin-bottom: 10px;
+            margin-bottom: 28px;
         }
 
-        p.subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 25px;
+        .brand h1 {
+            margin: 0;
+            font-size: 34px;
+            color: #163d7a;
+        }
+
+        .brand p {
+            margin-top: 10px;
+            color: #6b7280;
+            font-size: 14px;
         }
 
         label {
-            font-weight: bold;
             display: block;
-            margin-bottom: 6px;
-            color: #333;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #1f2937;
         }
 
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 12px;
+            padding: 13px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
             margin-bottom: 18px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
             font-size: 14px;
-            box-sizing: border-box;
         }
 
-        button {
+        input:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+        }
+
+        .login-btn {
             width: 100%;
             background: #1d4ed8;
             color: white;
             border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 16px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 12px;
             cursor: pointer;
         }
 
-        button:hover {
+        .login-btn:hover {
             background: #1e40af;
         }
 
-        .error {
-            background: #ffe5e5;
-            color: #b00020;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
+        .error-box {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 14px;
         }
 
-        .validation-errors {
-            background: #fff4e5;
-            color: #8a5500;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
+        .validation-box {
+            background: #fff7ed;
+            color: #9a3412;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 14px;
         }
 
         .footer-note {
-            margin-top: 20px;
+            margin-top: 18px;
             text-align: center;
+            color: #6b7280;
             font-size: 13px;
-            color: #777;
         }
     </style>
 </head>
 <body>
 
-    <div class="login-container">
-        <h1>BoF Online Banking</h1>
-        <p class="subtitle">Please log in using the credentials provided by the bank.</p>
+    <div class="login-card">
+        <div class="brand">
+            <h1>BoF</h1>
+            <p>Online Banking Portal</p>
+        </div>
 
         @if(session('error'))
-            <div class="error">
+            <div class="error-box">
                 {{ session('error') }}
             </div>
         @endif
 
         @if($errors->any())
-            <div class="validation-errors">
-                <ul style="margin: 0; padding-left: 20px;">
+            <div class="validation-box">
+                <ul style="margin: 0; padding-left: 18px;">
                     @foreach($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -132,7 +155,7 @@
                 required
             >
 
-            <button type="submit">Login</button>
+            <button type="submit" class="login-btn">Login</button>
         </form>
 
         <div class="footer-note">
