@@ -10,8 +10,8 @@
         }
 
         :root {
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 92px;
+            --sidebar-width: 285px;
+            --sidebar-collapsed-width: 96px;
 
             --primary-dark: #0b2147;
             --primary-mid: #163d7a;
@@ -126,6 +126,7 @@
             top: 0;
             height: 100vh;
             z-index: 50;
+            overflow: hidden;
         }
 
         body.dark-mode .sidebar {
@@ -149,6 +150,8 @@
             border-radius: 20px;
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.08);
+            position: relative;
+            min-height: 118px;
         }
 
         .brand-row {
@@ -156,7 +159,6 @@
             align-items: flex-start;
             justify-content: space-between;
             gap: 12px;
-            position: relative;
         }
 
         .brand {
@@ -176,8 +178,8 @@
         }
 
         .brand-mark {
-            width: 34px;
-            height: 34px;
+            width: 36px;
+            height: 36px;
             border-radius: 10px;
             display: inline-flex;
             align-items: center;
@@ -190,13 +192,16 @@
             flex-shrink: 0;
         }
 
+        .brand-name-text {
+            white-space: nowrap;
+        }
+
         .brand p {
-            margin: 10px 0 0 44px;
+            margin: 10px 0 0 46px;
             color: #dbeafe;
             font-size: 13px;
             line-height: 1.5;
-            white-space: normal;
-            max-width: 170px;
+            max-width: 175px;
         }
 
         .toggle-btn {
@@ -218,50 +223,6 @@
         .toggle-btn:hover {
             background: rgba(255,255,255,0.22);
             transform: translateY(-1px);
-        }
-
-        .sidebar.collapsed .brand p,
-        .sidebar.collapsed .menu-text,
-        .sidebar.collapsed .logout-text,
-        .sidebar.collapsed .sidebar-footer-note,
-        .sidebar.collapsed .sidebar-section-title,
-        .sidebar.collapsed .top-shortcut,
-        .sidebar.collapsed .brand-name-text {
-            display: none;
-        }
-
-        .sidebar.collapsed .brand-block {
-            padding: 12px 8px 58px;
-        }
-
-        .sidebar.collapsed .brand-row {
-            justify-content: center;
-            align-items: center;
-        }
-
-        .sidebar.collapsed .brand {
-            display: flex;
-            justify-content: center;
-        }
-
-        .sidebar.collapsed .brand h1 {
-            justify-content: center;
-        }
-
-        .sidebar.collapsed .toggle-btn {
-            display: inline-flex;
-            position: absolute;
-            top: 52px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 36px;
-            height: 36px;
-            font-size: 16px;
-            border-radius: 10px;
-        }
-
-        .sidebar.collapsed .toggle-btn:hover {
-            transform: translateX(-50%) translateY(-1px);
         }
 
         .sidebar-shortcuts {
@@ -287,7 +248,7 @@
         }
 
         .sidebar-section-title {
-            margin: 8px 8px 0;
+            margin: 6px 8px 0;
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.7px;
@@ -338,11 +299,6 @@
             flex-shrink: 0;
         }
 
-        .sidebar.collapsed .menu a {
-            justify-content: center;
-            padding: 13px 10px;
-        }
-
         .sidebar-bottom {
             display: flex;
             flex-direction: column;
@@ -382,11 +338,6 @@
         .logout-btn:hover {
             transform: translateY(-1px);
             box-shadow: 0 10px 20px rgba(185, 28, 28, 0.28);
-        }
-
-        .sidebar.collapsed .logout-btn {
-            padding-left: 10px;
-            padding-right: 10px;
         }
 
         .main {
@@ -719,6 +670,65 @@
             margin-bottom: 18px;
         }
 
+        .sidebar.collapsed .brand p,
+        .sidebar.collapsed .menu-text,
+        .sidebar.collapsed .logout-text,
+        .sidebar.collapsed .sidebar-footer-note,
+        .sidebar.collapsed .sidebar-section-title,
+        .sidebar.collapsed .top-shortcut,
+        .sidebar.collapsed .brand-name-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .brand-block {
+            padding: 12px 8px 60px;
+        }
+
+        .sidebar.collapsed .brand-row {
+            justify-content: center;
+            align-items: center;
+        }
+
+        .sidebar.collapsed .brand {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .sidebar.collapsed .brand h1 {
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .sidebar-shortcuts {
+            display: none;
+        }
+
+        .sidebar.collapsed .menu a {
+            justify-content: center;
+            padding: 13px 10px;
+        }
+
+        .sidebar.collapsed .toggle-btn {
+            position: absolute;
+            top: 58px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 36px;
+            height: 36px;
+            font-size: 16px;
+            border-radius: 10px;
+            display: inline-flex;
+        }
+
+        .sidebar.collapsed .toggle-btn:hover {
+            transform: translateX(-50%) translateY(-1px);
+        }
+
+        .sidebar.collapsed .logout-btn {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
         @media (max-width: 960px) {
             .layout {
                 flex-direction: column;
@@ -729,6 +739,7 @@
                 width: 100%;
                 height: auto;
                 position: relative;
+                padding: 18px 14px;
             }
 
             .sidebar.collapsed .brand p,
@@ -741,8 +752,15 @@
                 display: inline;
             }
 
+            .sidebar.collapsed .brand-block {
+                padding: 14px;
+            }
+
+            .sidebar.collapsed .sidebar-shortcuts {
+                display: flex;
+            }
+
             .sidebar.collapsed .toggle-btn {
-                display: inline-flex;
                 position: static;
                 transform: none;
                 width: 42px;
@@ -774,7 +792,6 @@
 
             .brand p {
                 max-width: none;
-                white-space: normal;
             }
         }
     </style>
@@ -835,12 +852,22 @@
                     <span class="menu-icon">💡</span>
                     <span class="menu-text">Bill Payment</span>
                 </a>
+
+                <a href="{{ route('beneficiaries') }}" class="{{ request()->routeIs('beneficiaries') ? 'active' : '' }}">
+                    <span class="menu-icon">👥</span>
+                    <span class="menu-text">Beneficiaries</span>
+                </a>
+
+                <a href="{{ route('scheduled-payments') }}" class="{{ request()->routeIs('scheduled-payments') ? 'active' : '' }}">
+                    <span class="menu-icon">🗓️</span>
+                    <span class="menu-text">Scheduled Payments</span>
+                </a>
             </nav>
         </div>
 
         <div class="sidebar-bottom">
             <div class="sidebar-footer-note">
-                Secure demo banking workspace for customer account access, payments, transfers, and transaction tracking.
+                Secure demo banking workspace for customer account access, payments, transfers, beneficiaries, scheduled payments, and transaction tracking.
             </div>
 
             <form class="logout-form" method="POST" action="{{ route('logout') }}">

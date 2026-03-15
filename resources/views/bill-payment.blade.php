@@ -35,7 +35,10 @@
         font-size: 24px;
     }
 
-    body.dark-mode .panel h3 {
+    body.dark-mode .panel h3,
+    body.dark-mode .payment-summary h4,
+    body.dark-mode .tips-box h4,
+    body.dark-mode .schedule-box h4 {
         color: #bfdbfe;
     }
 
@@ -44,6 +47,11 @@
         font-size: 13px;
         margin-top: -8px;
         margin-bottom: 18px;
+    }
+
+    body.dark-mode .section-note,
+    body.dark-mode .schedule-note {
+        color: #cbd5e1;
     }
 
     label {
@@ -130,7 +138,9 @@
         margin-top: 8px;
     }
 
-    .payment-summary {
+    .payment-summary,
+    .tips-box,
+    .schedule-box {
         background: #f8fbff;
         border: 1px solid #dbeafe;
         border-radius: 14px;
@@ -139,20 +149,18 @@
     }
 
     body.dark-mode .payment-summary,
-    body.dark-mode .tips-box {
+    body.dark-mode .tips-box,
+    body.dark-mode .schedule-box {
         background: rgba(15, 23, 42, 0.85);
         border-color: #334155;
     }
 
-    .payment-summary h4 {
+    .payment-summary h4,
+    .tips-box h4,
+    .schedule-box h4 {
         margin-top: 0;
         margin-bottom: 12px;
         color: #163d7a;
-    }
-
-    body.dark-mode .payment-summary h4,
-    body.dark-mode .tips-box h4 {
-        color: #bfdbfe;
     }
 
     .summary-row {
@@ -180,19 +188,6 @@
         color: #f3f4f6;
     }
 
-    .tips-box {
-        background: #f8fbff;
-        border: 1px solid #dbeafe;
-        border-radius: 14px;
-        padding: 18px;
-    }
-
-    .tips-box h4 {
-        margin-top: 0;
-        color: #163d7a;
-        margin-bottom: 12px;
-    }
-
     .tips-box p {
         margin: 0 0 10px;
         color: #4b5563;
@@ -206,6 +201,41 @@
 
     .tips-box p:last-child {
         margin-bottom: 0;
+    }
+
+    .schedule-note {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 12px;
+    }
+
+    .schedule-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    body.dark-mode .schedule-checkbox {
+        color: #e5e7eb;
+    }
+
+    .schedule-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        accent-color: #1d4ed8;
+        flex-shrink: 0;
+    }
+
+    .schedule-fields {
+        margin-top: 12px;
+    }
+
+    .hidden-field {
+        display: none;
     }
 
     @media (max-width: 960px) {
@@ -240,8 +270,8 @@
                     @foreach($billers as $biller)
                         <option
                             value="{{ $biller['id'] }}"
-                            data-reference-label="{{ $biller['referenceLabel'] ?? 'Reference' }}"
-                            data-reference-placeholder="{{ $biller['referencePlaceholder'] ?? 'Enter reference' }}"
+                            data-reference-label="{{ $biller['referenceLabel'] ?? 'Bill Reference' }}"
+                            data-reference-placeholder="{{ $biller['referencePlaceholder'] ?? 'Enter bill reference' }}"
                             {{ old('biller_id') == $biller['id'] ? 'selected' : '' }}
                         >
                             {{ $biller['name'] ?? '' }}
@@ -257,6 +287,40 @@
                     value="{{ old('bill_reference') }}"
                     placeholder="Enter bill reference"
                 >
+
+                <div class="schedule-box">
+                    <h4>Schedule Payment</h4>
+                    <div class="schedule-note">Choose this if you want the bill payment to be processed in the future instead of immediately.</div>
+
+                    <label class="schedule-checkbox" for="is_scheduled_bill">
+                        <input
+                            type="checkbox"
+                            id="is_scheduled_bill"
+                            name="is_scheduled_bill"
+                            value="1"
+                            {{ old('is_scheduled_bill') ? 'checked' : '' }}
+                        >
+                        <span>Schedule this payment</span>
+                    </label>
+
+                    <div id="scheduled-bill-fields" class="schedule-fields hidden-field">
+                        <label for="scheduled_date">Scheduled Date & Time</label>
+                        <input
+                            type="datetime-local"
+                            id="scheduled_date"
+                            name="scheduled_date"
+                            value="{{ old('scheduled_date') }}"
+                        >
+
+                        <label for="frequency">Frequency</label>
+                        <select id="frequency" name="frequency">
+                            <option value="Once" {{ old('frequency', 'Once') === 'Once' ? 'selected' : '' }}>Once</option>
+                            <option value="Daily" {{ old('frequency') === 'Daily' ? 'selected' : '' }}>Daily</option>
+                            <option value="Weekly" {{ old('frequency') === 'Weekly' ? 'selected' : '' }}>Weekly</option>
+                            <option value="Monthly" {{ old('frequency') === 'Monthly' ? 'selected' : '' }}>Monthly</option>
+                        </select>
+                    </div>
+                </div>
 
                 <label for="amount">Amount</label>
                 <input
@@ -278,7 +342,9 @@
                     placeholder="Optional payment note"
                 >{{ old('notes') }}</textarea>
 
-                <button type="submit" class="submit-btn">Pay Bill</button>
+                <button type="submit" class="submit-btn">
+                    {{ old('is_scheduled_bill') ? 'Schedule Bill Payment' : 'Pay Bill' }}
+                </button>
             </form>
         </section>
 
@@ -315,6 +381,7 @@
                 <h4>Bill Payment Tips</h4>
                 <p>Check the biller name and reference number carefully before submitting payment.</p>
                 <p>Ensure the selected account has enough balance to complete the payment.</p>
+                <p>Use scheduled payment if you want the bill paid on a future date.</p>
                 <p>Completed bill payments will appear in your transaction history and dashboard activity.</p>
             </div>
         </section>
@@ -326,6 +393,11 @@
     const billerSelect = document.getElementById('biller_id');
     const referenceLabel = document.getElementById('bill-reference-label');
     const referenceInput = document.getElementById('bill_reference');
+
+    const scheduleCheckbox = document.getElementById('is_scheduled_bill');
+    const scheduleFields = document.getElementById('scheduled-bill-fields');
+    const scheduledDate = document.getElementById('scheduled_date');
+    const frequency = document.getElementById('frequency');
 
     function updateBillerReferenceUI() {
         if (!billerSelect) return;
@@ -345,9 +417,28 @@
         referenceInput.placeholder = placeholder;
     }
 
+    function toggleScheduleFields() {
+        if (!scheduleCheckbox || !scheduleFields) return;
+
+        if (scheduleCheckbox.checked) {
+            scheduleFields.classList.remove('hidden-field');
+            scheduledDate.required = true;
+            frequency.required = true;
+        } else {
+            scheduleFields.classList.add('hidden-field');
+            scheduledDate.required = false;
+            frequency.required = false;
+        }
+    }
+
     if (billerSelect) {
         billerSelect.addEventListener('change', updateBillerReferenceUI);
         updateBillerReferenceUI();
+    }
+
+    if (scheduleCheckbox) {
+        scheduleCheckbox.addEventListener('change', toggleScheduleFields);
+        toggleScheduleFields();
     }
 </script>
 @endpush

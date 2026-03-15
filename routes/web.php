@@ -55,8 +55,8 @@ if (!function_exists('fetchCustomerAndTransactions')) {
 
         usort($transactions, function ($a, $b) {
             return strcmp(
-                (string)($b['transactionDate'] ?? ''),
-                (string)($a['transactionDate'] ?? '')
+                (string) ($b['transactionDate'] ?? ''),
+                (string) ($a['transactionDate'] ?? '')
             );
         });
 
@@ -83,6 +83,39 @@ if (!function_exists('fetchActiveOtherLocalBanks')) {
     {
         $response = Http::withToken($jwt)->get(
             'http://localhost:1337/api/other-local-banks?filters[isActive][$eq]=true&sort[0]=name:asc'
+        );
+
+        return $response->json()['data'] ?? [];
+    }
+}
+
+if (!function_exists('fetchBeneficiaries')) {
+    function fetchBeneficiaries(string $jwt, string $email): array
+    {
+        $response = Http::withToken($jwt)->get(
+            'http://localhost:1337/api/beneficiaries?filters[customerEmail][$eq]=' . urlencode($email) . '&sort[0]=nickname:asc'
+        );
+
+        return $response->json()['data'] ?? [];
+    }
+}
+
+if (!function_exists('fetchScheduledTransfers')) {
+    function fetchScheduledTransfers(string $jwt, string $email): array
+    {
+        $response = Http::withToken($jwt)->get(
+            'http://localhost:1337/api/scheduled-transfers?filters[customerEmail][$eq]=' . urlencode($email) . '&sort[0]=scheduledDate:asc&populate=*'
+        );
+
+        return $response->json()['data'] ?? [];
+    }
+}
+
+if (!function_exists('fetchScheduledBillPayments')) {
+    function fetchScheduledBillPayments(string $jwt, string $email): array
+    {
+        $response = Http::withToken($jwt)->get(
+            'http://localhost:1337/api/scheduled-bill-payments?filters[customerEmail][$eq]=' . urlencode($email) . '&sort[0]=scheduledDate:asc&populate=*'
         );
 
         return $response->json()['data'] ?? [];
@@ -158,17 +191,99 @@ Route::get('/transactions', function () {
     ]);
 })->name('transactions');
 
+Route::get('/beneficiaries', function () {
+    if (!session()->has('jwt')) {
+        return redirect('/login');
+    }
+
+    $jwt = session('jwt');
+    $user = session('user');
+    $email = $user['email'] ?? '';
+
+    $beneficiaries = fetchBeneficiaries($jwt, $email);
+
+    return view('beneficiaries', [
+        'customer' => session('customer'),
+        'beneficiaries' => $beneficiaries,
+    ]);
+})->name('beneficiaries');
+
+Route::post('/beneficiaries', function (Request $request) {
+    if (!session()->has('jwt')) {
+        return redirect('/login');
+    }
+
+    $request->validate([
+        'nickname' => 'required|string|max:100',
+        'beneficiary_name' => 'required|string|max:100',
+        'transfer_mode' => 'required|in:Internal,LocalBank',
+        'institution_name' => 'nullable|string|max:100',
+        'account_number' => 'required|string|max:100',
+    ]);
+
+    $jwt = session('jwt');
+    $user = session('user');
+    $email = $user['email'] ?? '';
+
+    $response = Http::withToken($jwt)->post('http://localhost:1337/api/beneficiaries', [
+        'data' => [
+            'nickname' => $request->nickname,
+            'beneficiaryName' => $request->beneficiary_name,
+            'transferMode' => $request->transfer_mode,
+            'institutionName' => $request->institution_name,
+            'accountNumber' => $request->account_number,
+            'customerEmail' => $email,
+            'isFavorite' => false,
+        ],
+    ]);
+
+    if (!$response->successful()) {
+        dd([
+            'step' => 'beneficiary_create',
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'json' => $response->json(),
+        ]);
+    }
+
+    return redirect()->route('beneficiaries')->with('success', 'Beneficiary saved successfully.');
+})->name('beneficiaries.store');
+
+Route::get('/scheduled-payments', function () {
+    if (!session()->has('jwt')) {
+        return redirect('/login');
+    }
+
+    $jwt = session('jwt');
+    $user = session('user');
+    $email = $user['email'] ?? '';
+
+    $scheduledTransfers = fetchScheduledTransfers($jwt, $email);
+    $scheduledBillPayments = fetchScheduledBillPayments($jwt, $email);
+
+    return view('scheduled-payments', [
+        'customer' => session('customer'),
+        'scheduledTransfers' => $scheduledTransfers,
+        'scheduledBillPayments' => $scheduledBillPayments,
+    ]);
+})->name('scheduled-payments');
+
 Route::get('/transfer', function () {
     if (!session()->has('jwt')) {
         return redirect('/login');
     }
 
     $jwt = session('jwt');
+    $user = session('user');
+    $email = $user['email'] ?? '';
+
     $otherLocalBanks = fetchActiveOtherLocalBanks($jwt);
+    $beneficiaries = fetchBeneficiaries($jwt, $email);
 
     return view('transfer', [
         'customer' => session('customer'),
         'otherLocalBanks' => $otherLocalBanks,
+        'beneficiaries' => $beneficiaries,
     ]);
 })->name('transfer');
 
@@ -188,6 +303,10 @@ Route::post('/transfer', function (Request $request) {
         'destination_institution_id' => 'nullable|integer|required_if:transfer_mode,local_bank',
         'destination_account_number' => 'nullable|string|required_if:transfer_mode,local_bank',
         'beneficiary_name' => 'nullable|string|required_if:transfer_mode,local_bank',
+
+        'is_scheduled_transfer' => 'nullable',
+        'scheduled_date' => 'nullable|date',
+        'frequency' => 'nullable|in:Once,Daily,Weekly,Monthly',
     ]);
 
     $jwt = session('jwt');
@@ -213,6 +332,113 @@ Route::post('/transfer', function (Request $request) {
 
     $amount = (float) $request->amount;
     $fromBalance = (float) ($fromAccount['balance'] ?? 0);
+
+    if ($request->filled('is_scheduled_transfer')) {
+        $request->validate([
+            'scheduled_date' => 'required|date',
+            'frequency' => 'required|in:Once,Daily,Weekly,Monthly',
+        ]);
+
+        $referenceNumber = 'SCH-TXN-' . time();
+
+        if ($request->transfer_mode === 'internal') {
+            $accountsResponse = Http::withToken($jwt)->get(
+                'http://localhost:1337/api/accounts?populate=*'
+            );
+
+            $allAccounts = $accountsResponse->json()['data'] ?? [];
+            $toAccount = null;
+
+            foreach ($allAccounts as $account) {
+                if (
+                    isset($account['accountNumber']) &&
+                    trim((string) $account['accountNumber']) === trim((string) $request->to_account_number)
+                ) {
+                    $toAccount = $account;
+                    break;
+                }
+            }
+
+            if (!$toAccount) {
+                return back()->withInput()->with('error', 'Destination BoF account not found.');
+            }
+
+            if ((int) $toAccount['id'] === (int) $fromAccount['id']) {
+                return back()->withInput()->with('error', 'Cannot transfer to the same account.');
+            }
+
+            $scheduledResponse = Http::withToken($jwt)->post('http://localhost:1337/api/scheduled-transfers', [
+                'data' => [
+                    'referenceNumber' => $referenceNumber,
+                    'transferMode' => 'Internal',
+                    'amount' => $amount,
+                    'scheduledDate' => $request->scheduled_date,
+                    'frequency' => $request->frequency,
+                    'description' => $request->description,
+                    'destinationInstitution' => 'BoF',
+                    'destinationAccountNumber' => $toAccount['accountNumber'] ?? '',
+                    'beneficiaryName' => $toAccount['accountHolderName'] ?? '',
+                    'scheduleStatus' => 'Pending',
+                    'customerEmail' => $user['email'] ?? '',
+                    'sourceAccount' => $fromAccount['id'],
+                    'destinationAccount' => $toAccount['id'],
+                ],
+            ]);
+
+            if (!$scheduledResponse->successful()) {
+                dd([
+                    'step' => 'scheduled_internal_transfer_create',
+                    'status' => $scheduledResponse->status(),
+                    'body' => $scheduledResponse->body(),
+                    'json' => $scheduledResponse->json(),
+                ]);
+            }
+
+            return redirect('/dashboard')->with('success', 'Internal transfer scheduled successfully.');
+        }
+
+        $otherLocalBanks = fetchActiveOtherLocalBanks($jwt);
+        $selectedInstitution = null;
+
+        foreach ($otherLocalBanks as $bank) {
+            if ((int) ($bank['id'] ?? 0) === (int) $request->destination_institution_id) {
+                $selectedInstitution = $bank;
+                break;
+            }
+        }
+
+        if (!$selectedInstitution) {
+            return back()->withInput()->with('error', 'Selected destination institution not found.');
+        }
+
+        $scheduledResponse = Http::withToken($jwt)->post('http://localhost:1337/api/scheduled-transfers', [
+            'data' => [
+                'referenceNumber' => $referenceNumber,
+                'transferMode' => 'LocalBank',
+                'amount' => $amount,
+                'scheduledDate' => $request->scheduled_date,
+                'frequency' => $request->frequency,
+                'description' => $request->description,
+                'destinationInstitution' => $selectedInstitution['name'] ?? '',
+                'destinationAccountNumber' => $request->destination_account_number,
+                'beneficiaryName' => $request->beneficiary_name,
+                'scheduleStatus' => 'Pending',
+                'customerEmail' => $user['email'] ?? '',
+                'sourceAccount' => $fromAccount['id'],
+            ],
+        ]);
+
+        if (!$scheduledResponse->successful()) {
+            dd([
+                'step' => 'scheduled_local_bank_transfer_create',
+                'status' => $scheduledResponse->status(),
+                'body' => $scheduledResponse->body(),
+                'json' => $scheduledResponse->json(),
+            ]);
+        }
+
+        return redirect('/dashboard')->with('success', 'Local bank transfer scheduled successfully.');
+    }
 
     if ($amount > $fromBalance) {
         return back()->withInput()->with('error', 'Insufficient balance.');
@@ -432,6 +658,10 @@ Route::post('/bill-payment', function (Request $request) {
         'bill_reference' => 'nullable|string',
         'amount' => 'required|numeric|min:1',
         'notes' => 'nullable|string',
+
+        'is_scheduled_bill' => 'nullable',
+        'scheduled_date' => 'nullable|date',
+        'frequency' => 'nullable|in:Once,Daily,Weekly,Monthly',
     ]);
 
     $jwt = session('jwt');
@@ -471,6 +701,41 @@ Route::post('/bill-payment', function (Request $request) {
 
     $amount = (float) $request->amount;
     $fromBalance = (float) ($fromAccount['balance'] ?? 0);
+
+    if ($request->filled('is_scheduled_bill')) {
+        $request->validate([
+            'scheduled_date' => 'required|date',
+            'frequency' => 'required|in:Once,Daily,Weekly,Monthly',
+        ]);
+
+        $referenceNumber = 'SCH-BILL-' . time();
+
+        $scheduledBillResponse = Http::withToken($jwt)->post('http://localhost:1337/api/scheduled-bill-payments', [
+            'data' => [
+                'referenceNumber' => $referenceNumber,
+                'amount' => $amount,
+                'scheduledDate' => $request->scheduled_date,
+                'frequency' => $request->frequency,
+                'billReference' => $request->bill_reference,
+                'notes' => $request->notes,
+                'scheduleStatus' => 'Pending',
+                'customerEmail' => $user['email'] ?? '',
+                'billerName' => $selectedBiller['name'] ?? '',
+                'sourceAccount' => $fromAccount['id'],
+            ],
+        ]);
+
+        if (!$scheduledBillResponse->successful()) {
+            dd([
+                'step' => 'scheduled_bill_payment_create',
+                'status' => $scheduledBillResponse->status(),
+                'body' => $scheduledBillResponse->body(),
+                'json' => $scheduledBillResponse->json(),
+            ]);
+        }
+
+        return redirect('/dashboard')->with('success', 'Bill payment scheduled successfully.');
+    }
 
     if ($amount > $fromBalance) {
         return back()->withInput()->with('error', 'Insufficient balance.');

@@ -37,7 +37,9 @@
 
     body.dark-mode .panel h3,
     body.dark-mode .tips-box h4,
-    body.dark-mode .transfer-summary h4 {
+    body.dark-mode .transfer-summary h4,
+    body.dark-mode .saved-beneficiary-box h4,
+    body.dark-mode .schedule-box h4 {
         color: #bfdbfe;
     }
 
@@ -141,7 +143,9 @@
 
     body.dark-mode .tips-box,
     body.dark-mode .transfer-summary,
-    body.dark-mode .transfer-type-box {
+    body.dark-mode .transfer-type-box,
+    body.dark-mode .saved-beneficiary-box,
+    body.dark-mode .schedule-box {
         background: rgba(15, 23, 42, 0.85);
         border-color: #334155;
     }
@@ -161,7 +165,9 @@
 
     body.dark-mode .tips-box p,
     body.dark-mode .section-note,
-    body.dark-mode .dynamic-help {
+    body.dark-mode .dynamic-help,
+    body.dark-mode .saved-beneficiary-note,
+    body.dark-mode .schedule-note {
         color: #cbd5e1;
     }
 
@@ -294,6 +300,54 @@
         display: none;
     }
 
+    .saved-beneficiary-box,
+    .schedule-box {
+        background: #f8fbff;
+        border: 1px solid #dbeafe;
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 18px;
+    }
+
+    .saved-beneficiary-box h4,
+    .schedule-box h4 {
+        margin: 0 0 8px;
+        color: #163d7a;
+        font-size: 16px;
+    }
+
+    .saved-beneficiary-note,
+    .schedule-note {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 12px;
+    }
+
+    .schedule-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    body.dark-mode .schedule-checkbox {
+        color: #e5e7eb;
+    }
+
+    .schedule-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        accent-color: #1d4ed8;
+        flex-shrink: 0;
+    }
+
+    .schedule-fields {
+        margin-top: 12px;
+    }
+
     @media (max-width: 960px) {
         .content-grid {
             grid-template-columns: 1fr;
@@ -314,6 +368,28 @@
 
             <form method="POST" action="{{ route('transfer.submit') }}">
                 @csrf
+
+                @if(!empty($beneficiaries) && count($beneficiaries) > 0)
+                    <div class="saved-beneficiary-box">
+                        <h4>Use Saved Beneficiary</h4>
+                        <div class="saved-beneficiary-note">Select a saved recipient to auto-fill transfer details.</div>
+
+                        <select id="saved_beneficiary">
+                            <option value="">-- Select Saved Beneficiary --</option>
+                            @foreach($beneficiaries as $beneficiary)
+                                <option
+                                    value="{{ $beneficiary['id'] }}"
+                                    data-mode="{{ strtolower($beneficiary['transferMode'] ?? '') === 'localbank' ? 'local_bank' : 'internal' }}"
+                                    data-name="{{ $beneficiary['beneficiaryName'] ?? '' }}"
+                                    data-institution="{{ $beneficiary['institutionName'] ?? '' }}"
+                                    data-account="{{ $beneficiary['accountNumber'] ?? '' }}"
+                                >
+                                    {{ $beneficiary['nickname'] ?? '' }} - {{ $beneficiary['accountNumber'] ?? '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
 
                 <div class="transfer-type-box">
                     <label style="margin-bottom: 12px;">Transfer Type</label>
@@ -409,6 +485,40 @@
                     </div>
                 </div>
 
+                <div class="schedule-box">
+                    <h4>Schedule Transfer</h4>
+                    <div class="schedule-note">Choose this if you want the transfer to happen in the future instead of immediately.</div>
+
+                    <label class="schedule-checkbox" for="is_scheduled_transfer">
+                        <input
+                            type="checkbox"
+                            id="is_scheduled_transfer"
+                            name="is_scheduled_transfer"
+                            value="1"
+                            {{ old('is_scheduled_transfer') ? 'checked' : '' }}
+                        >
+                        <span>Schedule this transfer</span>
+                    </label>
+
+                    <div id="scheduled-transfer-fields" class="schedule-fields hidden-field">
+                        <label for="scheduled_date">Scheduled Date & Time</label>
+                        <input
+                            type="datetime-local"
+                            id="scheduled_date"
+                            name="scheduled_date"
+                            value="{{ old('scheduled_date') }}"
+                        >
+
+                        <label for="frequency">Frequency</label>
+                        <select id="frequency" name="frequency">
+                            <option value="Once" {{ old('frequency', 'Once') === 'Once' ? 'selected' : '' }}>Once</option>
+                            <option value="Daily" {{ old('frequency') === 'Daily' ? 'selected' : '' }}>Daily</option>
+                            <option value="Weekly" {{ old('frequency') === 'Weekly' ? 'selected' : '' }}>Weekly</option>
+                            <option value="Monthly" {{ old('frequency') === 'Monthly' ? 'selected' : '' }}>Monthly</option>
+                        </select>
+                    </div>
+                </div>
+
                 <label for="amount">Amount</label>
                 <input
                     type="number"
@@ -429,7 +539,9 @@
                     placeholder="Add a note for this transfer"
                 >{{ old('description') }}</textarea>
 
-                <button type="submit" class="submit-btn">Send Transfer</button>
+                <button type="submit" class="submit-btn">
+                    {{ old('is_scheduled_transfer') ? 'Schedule Transfer' : 'Send Transfer' }}
+                </button>
             </form>
         </section>
 
@@ -454,8 +566,8 @@
                     <strong>Internal + Local Bank</strong>
                 </div>
                 <div class="summary-row">
-                    <span>Institutions</span>
-                    <strong>BoF, Wallets, Banks</strong>
+                    <span>Execution</span>
+                    <strong>Instant or Scheduled</strong>
                 </div>
                 <div class="summary-row">
                     <span>Reference</span>
@@ -467,6 +579,8 @@
                 <h4>Transfer Tips</h4>
                 <p>Use internal transfer for BoF-to-BoF account movement.</p>
                 <p>Use local bank transfer for M-Paisa, MyCash, BSP, ANZ, Westpac, and BRED.</p>
+                <p>You can select a saved beneficiary to automatically fill transfer details.</p>
+                <p>Use scheduled transfer when you want funds sent on a future date.</p>
                 <p>Always confirm the institution, account number, and beneficiary name before submitting.</p>
             </div>
         </section>
@@ -487,6 +601,12 @@
     const beneficiaryName = document.getElementById('beneficiary_name');
     const destinationAccountLabel = document.getElementById('destination-account-label');
     const institutionHelpText = document.getElementById('institution-help-text');
+    const savedBeneficiary = document.getElementById('saved_beneficiary');
+
+    const scheduleCheckbox = document.getElementById('is_scheduled_transfer');
+    const scheduleFields = document.getElementById('scheduled-transfer-fields');
+    const scheduledDate = document.getElementById('scheduled_date');
+    const frequency = document.getElementById('frequency');
 
     function toggleTransferMode() {
         const isInternal = internalRadio.checked;
@@ -532,6 +652,76 @@
         institutionHelpText.textContent = 'You are sending to ' + name + (category ? ' (' + category + ')' : '') + '.';
     }
 
+    function applySavedBeneficiary() {
+        if (!savedBeneficiary || !savedBeneficiary.value) return;
+
+        const selected = savedBeneficiary.options[savedBeneficiary.selectedIndex];
+        const mode = selected.getAttribute('data-mode') || '';
+        const name = selected.getAttribute('data-name') || '';
+        const institution = selected.getAttribute('data-institution') || '';
+        const account = selected.getAttribute('data-account') || '';
+
+        if (mode === 'internal') {
+            if (internalRadio) {
+                internalRadio.checked = true;
+                toggleTransferMode();
+            }
+
+            if (toAccountNumber) {
+                toAccountNumber.value = account;
+            }
+        } else if (mode === 'local_bank') {
+            if (localBankRadio) {
+                localBankRadio.checked = true;
+                toggleTransferMode();
+            }
+
+            if (destinationAccountNumber) {
+                destinationAccountNumber.value = account;
+            }
+
+            if (beneficiaryName) {
+                beneficiaryName.value = name;
+            }
+
+            if (destinationInstitution) {
+                let matched = false;
+
+                for (let i = 0; i < destinationInstitution.options.length; i++) {
+                    const optionText = destinationInstitution.options[i].text.toLowerCase();
+                    const optionName = (destinationInstitution.options[i].getAttribute('data-name') || '').toLowerCase();
+
+                    if (
+                        optionText.includes(institution.toLowerCase()) ||
+                        optionName.includes(institution.toLowerCase())
+                    ) {
+                        destinationInstitution.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (matched) {
+                    updateInstitutionFields();
+                }
+            }
+        }
+    }
+
+    function toggleScheduleFields() {
+        if (!scheduleCheckbox || !scheduleFields) return;
+
+        if (scheduleCheckbox.checked) {
+            scheduleFields.classList.remove('hidden-field');
+            scheduledDate.required = true;
+            frequency.required = true;
+        } else {
+            scheduleFields.classList.add('hidden-field');
+            scheduledDate.required = false;
+            frequency.required = false;
+        }
+    }
+
     if (internalRadio && localBankRadio) {
         internalRadio.addEventListener('change', toggleTransferMode);
         localBankRadio.addEventListener('change', toggleTransferMode);
@@ -541,6 +731,15 @@
     if (destinationInstitution) {
         destinationInstitution.addEventListener('change', updateInstitutionFields);
         updateInstitutionFields();
+    }
+
+    if (savedBeneficiary) {
+        savedBeneficiary.addEventListener('change', applySavedBeneficiary);
+    }
+
+    if (scheduleCheckbox) {
+        scheduleCheckbox.addEventListener('change', toggleScheduleFields);
+        toggleScheduleFields();
     }
 </script>
 @endpush
