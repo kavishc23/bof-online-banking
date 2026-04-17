@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $pageTitle ?? 'BoF Online Banking' }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     <style>
         * {
             box-sizing: border-box;
         }
 
         :root {
-            --sidebar-width: 285px;
+            --sidebar-width: 300px;
             --sidebar-collapsed-width: 96px;
 
             --primary-dark: #0b2147;
@@ -126,7 +127,8 @@
             top: 0;
             height: 100vh;
             z-index: 50;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         body.dark-mode .sidebar {
@@ -142,16 +144,15 @@
         .sidebar-top {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 18px;
         }
 
         .brand-block {
-            padding: 14px;
-            border-radius: 20px;
+            padding: 16px;
+            border-radius: 22px;
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.08);
             position: relative;
-            min-height: 118px;
         }
 
         .brand-row {
@@ -178,9 +179,9 @@
         }
 
         .brand-mark {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -197,11 +198,11 @@
         }
 
         .brand p {
-            margin: 10px 0 0 46px;
+            margin: 10px 0 0 48px;
             color: #dbeafe;
             font-size: 13px;
             line-height: 1.5;
-            max-width: 175px;
+            max-width: 180px;
         }
 
         .toggle-btn {
@@ -226,38 +227,46 @@
         }
 
         .sidebar-shortcuts {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 14px;
+            margin-top: 16px;
         }
 
         .top-shortcut {
-            padding: 8px 10px;
-            border-radius: 12px;
+            padding: 10px 12px;
+            border-radius: 14px;
             background: rgba(255,255,255,0.08);
             color: #e0ecff;
             font-size: 12px;
+            font-weight: 700;
             text-decoration: none;
             border: 1px solid rgba(255,255,255,0.06);
             transition: 0.2s ease;
+            text-align: center;
         }
 
         .top-shortcut:hover {
             background: rgba(255,255,255,0.14);
         }
 
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
         .sidebar-section-title {
-            margin: 6px 8px 0;
+            margin: 6px 10px 2px;
             font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.7px;
+            letter-spacing: 0.9px;
             color: #bfdbfe;
-            opacity: 0.9;
+            opacity: 0.92;
+            font-weight: 800;
         }
 
         .menu {
-            margin-top: 2px;
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -269,13 +278,13 @@
             gap: 12px;
             text-decoration: none;
             color: white;
-            padding: 13px 14px;
-            border-radius: 14px;
+            padding: 12px 14px;
+            border-radius: 16px;
             font-size: 15px;
             font-weight: 600;
             background: rgba(255,255,255,0.05);
             transition: 0.2s ease;
-            min-height: 48px;
+            min-height: 46px;
             border: 1px solid transparent;
         }
 
@@ -297,20 +306,22 @@
             width: 22px;
             font-size: 17px;
             flex-shrink: 0;
+            opacity: 0.95;
         }
 
         .sidebar-bottom {
             display: flex;
             flex-direction: column;
             gap: 14px;
+            margin-top: 18px;
         }
 
         .sidebar-footer-note {
             color: #d6e5ff;
             font-size: 12px;
-            line-height: 1.5;
+            line-height: 1.6;
             padding: 0 4px;
-            opacity: 0.92;
+            opacity: 0.9;
         }
 
         .logout-form {
@@ -367,10 +378,10 @@
 
         .top-utility-left .eyebrow {
             font-size: 12px;
-            letter-spacing: 0.7px;
+            letter-spacing: 0.8px;
             text-transform: uppercase;
             color: var(--text-muted);
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .top-utility-left .date-line {
@@ -396,7 +407,7 @@
             box-shadow: 0 8px 20px rgba(15, 43, 91, 0.04);
             color: var(--text-soft);
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .chip-dot {
@@ -663,11 +674,61 @@
             font-size: 15px;
         }
 
-        .section-note {
-            color: var(--text-soft);
-            font-size: 13px;
-            margin-top: -8px;
-            margin-bottom: 18px;
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 360px;
+            pointer-events: none;
+        }
+
+        .toast {
+            min-width: 280px;
+            max-width: 360px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 14px 30px rgba(0,0,0,0.18);
+            opacity: 0;
+            transform: translateY(-10px);
+            animation: toastIn 0.25s ease forwards;
+            pointer-events: auto;
+        }
+
+        .toast-success {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+        }
+
+        .toast-error {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+        }
+
+        .toast-info {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+
+        .toast-warning {
+            background: linear-gradient(135deg, #d97706, #b45309);
+        }
+
+        @keyframes toastIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes toastOut {
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
         }
 
         .sidebar.collapsed .brand p,
@@ -757,7 +818,7 @@
             }
 
             .sidebar.collapsed .sidebar-shortcuts {
-                display: flex;
+                display: grid;
             }
 
             .sidebar.collapsed .toggle-btn {
@@ -793,6 +854,18 @@
             .brand p {
                 max-width: none;
             }
+
+            .toast-container {
+                top: 16px;
+                right: 16px;
+                left: 16px;
+                max-width: none;
+            }
+
+            .toast {
+                min-width: 100%;
+                max-width: 100%;
+            }
         }
     </style>
 
@@ -820,54 +893,105 @@
                 </div>
             </div>
 
-            <div class="sidebar-section-title">Main Menu</div>
+            <div class="nav-group">
+                <div class="sidebar-section-title">Overview</div>
+                <nav class="menu">
+                    <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                        <span class="menu-icon">🏠</span>
+                        <span class="menu-text">Dashboard</span>
+                    </a>
 
-            <nav class="menu">
-                <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <span class="menu-icon">🏠</span>
-                    <span class="menu-text">Dashboard</span>
-                </a>
+                    <a href="{{ route('transactions') }}" class="{{ request()->routeIs('transactions') ? 'active' : '' }}">
+                        <span class="menu-icon">📄</span>
+                        <span class="menu-text">Transactions</span>
+                    </a>
 
-                <a href="{{ route('dashboard') }}#profile">
-                    <span class="menu-icon">👤</span>
-                    <span class="menu-text">Customer Profile</span>
-                </a>
+                    <a href="{{ route('customer-profile') }}" class="{{ request()->routeIs('customer-profile') ? 'active' : '' }}">
+                        <span class="menu-icon">👤</span>
+                        <span class="menu-text">Customer Profile</span>
+                    </a>
+                </nav>
+            </div>
 
-                <a href="{{ route('dashboard') }}#accounts">
-                    <span class="menu-icon">💳</span>
-                    <span class="menu-text">Accounts</span>
-                </a>
+            <div class="nav-group">
+                <div class="sidebar-section-title">Payments</div>
+                <nav class="menu">
+                    <a href="{{ route('transfer') }}" class="{{ request()->routeIs('transfer') ? 'active' : '' }}">
+                        <span class="menu-icon">🔁</span>
+                        <span class="menu-text">Transfer Money</span>
+                    </a>
 
-                <a href="{{ route('transactions') }}" class="{{ request()->routeIs('transactions') ? 'active' : '' }}">
-                    <span class="menu-icon">📄</span>
-                    <span class="menu-text">Transactions</span>
-                </a>
+                    <a href="{{ route('bill-payment') }}" class="{{ request()->routeIs('bill-payment') ? 'active' : '' }}">
+                        <span class="menu-icon">💡</span>
+                        <span class="menu-text">Bill Payment</span>
+                    </a>
 
-                <a href="{{ route('transfer') }}" class="{{ request()->routeIs('transfer') ? 'active' : '' }}">
-                    <span class="menu-icon">🔁</span>
-                    <span class="menu-text">Transfer Money</span>
-                </a>
+                    <a href="{{ route('beneficiaries') }}" class="{{ request()->routeIs('beneficiaries') ? 'active' : '' }}">
+                        <span class="menu-icon">👥</span>
+                        <span class="menu-text">Beneficiaries</span>
+                    </a>
 
-                <a href="{{ route('bill-payment') }}" class="{{ request()->routeIs('bill-payment') ? 'active' : '' }}">
-                    <span class="menu-icon">💡</span>
-                    <span class="menu-text">Bill Payment</span>
-                </a>
+                    <a href="{{ route('scheduled-payments') }}" class="{{ request()->routeIs('scheduled-payments') ? 'active' : '' }}">
+                        <span class="menu-icon">🗓️</span>
+                        <span class="menu-text">Scheduled Payments</span>
+                    </a>
 
-                <a href="{{ route('beneficiaries') }}" class="{{ request()->routeIs('beneficiaries') ? 'active' : '' }}">
-                    <span class="menu-icon">👥</span>
-                    <span class="menu-text">Beneficiaries</span>
-                </a>
+                    <a href="{{ route('account-statement') }}" class="{{ request()->routeIs('account-statement') ? 'active' : '' }}">
+                        <span class="menu-icon">📑</span>
+                        <span class="menu-text">Account Statement</span>
+                    </a>
+                </nav>
+            </div>
 
-                <a href="{{ route('scheduled-payments') }}" class="{{ request()->routeIs('scheduled-payments') ? 'active' : '' }}">
-                    <span class="menu-icon">🗓️</span>
-                    <span class="menu-text">Scheduled Payments</span>
-                </a>
-            </nav>
+            <div class="nav-group">
+                <div class="sidebar-section-title">Lending</div>
+                <nav class="menu">
+                    <a href="{{ route('loan-application') }}" class="{{ request()->routeIs('loan-application') ? 'active' : '' }}">
+                        <span class="menu-icon">📑</span>
+                        <span class="menu-text">Loan Application</span>
+                    </a>
+
+                    <a href="{{ route('my-loans') }}" class="{{ request()->routeIs('my-loans') ? 'active' : '' }}">
+                        <span class="menu-icon">🏦</span>
+                        <span class="menu-text">My Loans</span>
+                    </a>
+
+                    <a href="{{ route('loan-products') }}" class="{{ request()->routeIs('loan-products') ? 'active' : '' }}">
+                        <span class="menu-icon">📢</span>
+                        <span class="menu-text">Loan Products</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="nav-group">
+                <div class="sidebar-section-title">Wealth</div>
+                <nav class="menu">
+                    <a href="{{ route('investments') }}" class="{{ request()->routeIs('investments') ? 'active' : '' }}">
+                        <span class="menu-icon">📈</span>
+                        <span class="menu-text">Investments</span>
+                    </a>
+
+                    <a href="{{ route('my-investments') }}" class="{{ request()->routeIs('my-investments') ? 'active' : '' }}">
+                        <span class="menu-icon">💼</span>
+                        <span class="menu-text">My Investments</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="nav-group">
+                <div class="sidebar-section-title">Tax report</div>
+                <nav class="menu">
+                    <a href="{{ route('tax-report') }}" class="{{ request()->routeIs('tax-report') ? 'active' : '' }}">
+                        <span class="menu-icon">🧾</span>
+                        <span class="menu-text">Tax Report</span>
+                    </a>
+                </nav>
+            </div>
         </div>
 
         <div class="sidebar-bottom">
             <div class="sidebar-footer-note">
-                Secure demo banking workspace for customer account access, payments, transfers, beneficiaries, scheduled payments, and transaction tracking.
+                Secure demo banking workspace for customer account access, payments, transfers, beneficiaries, lending, and transaction tracking.
             </div>
 
             <form class="logout-form" method="POST" action="{{ route('logout') }}">
@@ -916,18 +1040,6 @@
                 </div>
             @endif
 
-            @if(session('success'))
-                <div class="success-box">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="error-box">
-                    {{ session('error') }}
-                </div>
-            @endif
-
             @if($errors->any())
                 <div class="validation-box">
                     <ul style="margin: 0; padding-left: 18px;">
@@ -942,6 +1054,8 @@
         </div>
     </main>
 </div>
+
+<div class="toast-container" id="toastContainer"></div>
 
 <script>
     const sidebar = document.getElementById('sidebar');
@@ -982,6 +1096,44 @@
             themeToggle.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
         });
     }
+
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container || !message) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'toastOut 0.25s ease forwards';
+            setTimeout(() => toast.remove(), 250);
+        }, 4000);
+    }
+
+    @if(session('info'))
+        <div class="validation-box">
+            {{ session('info') }}
+        </div>
+    @endif
+
+    @if(session('success'))
+        showToast(@json(session('success')), 'success');
+    @endif
+
+    @if(session('error'))
+        showToast(@json(session('error')), 'error');
+    @endif
+
+    @if(session('info'))
+        showToast(@json(session('info')), 'info');
+    @endif
+
+    @if(session('warning'))
+        showToast(@json(session('warning')), 'warning');
+    @endif
 </script>
 
 @stack('scripts')

@@ -5,767 +5,774 @@
 @endphp
 
 @section('topcard')
-    <h2>Transaction History</h2>
-    <p>Review all account activity, including internal transfers, local bank transfers, bill payments, deposits, and exact timestamps.</p>
+    <div class="tx-hero">
+        <h2>Transaction History</h2>
+        <p>Review your account activity, including transfers, bill payments, and incoming deposits.</p>
+    </div>
 @endsection
 
 @push('styles')
 <style>
-    .stats-row {
+    :root {
+        --tx-bg: #f4f6fb;
+        --tx-surface: #ffffff;
+        --tx-surface-2: #f8fafc;
+        --tx-surface-3: #eef4ff;
+        --tx-border: #d9e1ec;
+        --tx-text: #162033;
+        --tx-text-soft: #667085;
+        --tx-text-muted: #8c97aa;
+        --tx-primary: #0b56b3;
+        --tx-primary-2: #1d4ed8;
+        --tx-row-highlight: #eef5ff;
+        --tx-input-bg: #ffffff;
+        --tx-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        --tx-soft-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+        --tx-processed-bg: #d9f7be;
+        --tx-processed-text: #3f8600;
+        --tx-pending-bg: #fff4cc;
+        --tx-pending-text: #9a6700;
+        --tx-failed-bg: #fde2e2;
+        --tx-failed-text: #b42318;
+        --tx-info-bg: #e8f1ff;
+        --tx-info-text: #1d4ed8;
+    }
+
+    body.dark-mode {
+        --tx-bg: #07162f;
+        --tx-surface: #0f1e3b;
+        --tx-surface-2: #13274a;
+        --tx-surface-3: #173154;
+        --tx-border: rgba(255,255,255,0.14);
+        --tx-text: #e8eefc;
+        --tx-text-soft: #a9b6d3;
+        --tx-text-muted: #8fa2c6;
+        --tx-primary: #8fb5ff;
+        --tx-primary-2: #7eb2ff;
+        --tx-row-highlight: rgba(143, 181, 255, 0.12);
+        --tx-input-bg: #102241;
+        --tx-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+        --tx-soft-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+        --tx-processed-bg: #c9ef9e;
+        --tx-processed-text: #2f7a00;
+        --tx-pending-bg: #ffe7a3;
+        --tx-pending-text: #8b5e00;
+        --tx-failed-bg: #f8d7da;
+        --tx-failed-text: #9f1239;
+        --tx-info-bg: rgba(126, 178, 255, 0.14);
+        --tx-info-text: #aecdff;
+    }
+
+    .tx-page {
+        color: var(--tx-text);
+    }
+
+    .tx-card {
+        background: var(--tx-surface);
+        border: 1px solid var(--tx-border);
+        border-radius: 24px;
+        box-shadow: var(--tx-shadow);
+        overflow: hidden;
+        transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+    }
+
+    .tx-card-header {
+        padding: 24px 24px 16px;
+        border-bottom: 1px solid var(--tx-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .tx-card-header h3 {
+        margin: 0 0 6px;
+        color: #c53030;
+        font-size: 1.08rem;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    body.dark-mode .tx-card-header h3 {
+        color: #ff9b9b;
+    }
+
+    .tx-card-header p {
+        margin: 0;
+        color: var(--tx-text-soft);
+        font-size: 0.95rem;
+    }
+
+    .tx-account-switch {
+        min-width: 240px;
+    }
+
+    .tx-summary {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 18px;
-        margin-bottom: 24px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        padding: 20px 20px 0;
     }
 
-    .stat-card {
-        background: white;
-        border-radius: 18px;
-        padding: 22px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    .tx-summary-box {
+        background: var(--tx-surface-2);
+        border: 1px solid var(--tx-border);
+        border-radius: 16px;
+        padding: 16px 16px;
+        box-shadow: var(--tx-soft-shadow);
     }
 
-    body.dark-mode .stat-card,
-    body.dark-mode .section {
-        background: rgba(17, 24, 39, 0.9);
-        border: 1px solid rgba(51, 65, 85, 0.8);
+    .tx-summary-box .label {
+        margin: 0 0 8px;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--tx-text-soft);
     }
 
-    .stat-card h3 {
-        margin: 0 0 10px;
-        color: #6b7280;
-        font-size: 15px;
+    .tx-summary-box .value {
+        margin: 0;
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: var(--tx-text);
+    }
+
+    .tx-summary-box .sub {
+        margin-top: 6px;
+        color: var(--tx-text-muted);
+        font-size: 0.82rem;
+    }
+
+    .tx-filters {
+        display: grid;
+        grid-template-columns: 1.6fr 1fr 1fr 1fr auto;
+        gap: 12px;
+        padding: 18px 20px;
+        align-items: center;
+    }
+
+    .tx-input,
+    .tx-select {
+        width: 100%;
+        min-height: 46px;
+        padding: 10px 14px;
+        border: 1px solid var(--tx-border);
+        border-radius: 12px;
+        background: var(--tx-input-bg);
+        color: var(--tx-text);
+        font-size: 0.95rem;
+        outline: none;
+        transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+    }
+
+    .tx-input::placeholder {
+        color: var(--tx-text-soft);
+    }
+
+    .tx-input:focus,
+    .tx-select:focus {
+        border-color: var(--tx-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+    }
+
+    .tx-btn {
+        min-height: 46px;
+        padding: 10px 16px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 0.2s ease;
+    }
+
+    .tx-btn-primary {
+        background: var(--tx-primary);
+        color: #fff;
+    }
+
+    .tx-btn-primary:hover {
+        filter: brightness(1.05);
+    }
+
+    .tx-results {
+        padding: 0 20px 14px;
+        color: var(--tx-text-soft);
+        font-size: 0.92rem;
+    }
+
+    .tx-table-wrap {
+        padding: 0 0 10px;
+    }
+
+    .tx-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .tx-table thead th {
+        text-align: left;
+        padding: 15px 16px;
+        font-size: 0.83rem;
+        font-weight: 800;
+        color: var(--tx-text-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        border-top: 1px solid var(--tx-border);
+        border-bottom: 1px solid var(--tx-border);
+        background: var(--tx-surface);
+        white-space: nowrap;
+    }
+
+    .tx-table tbody td {
+        padding: 16px 16px;
+        border-bottom: 1px solid var(--tx-border);
+        color: var(--tx-text);
+        vertical-align: middle;
+        background: var(--tx-surface);
+    }
+
+    .tx-table tbody tr.highlight td {
+        background: var(--tx-row-highlight);
+    }
+
+    .tx-table tbody tr:hover td {
+        background: var(--tx-surface-2);
+    }
+
+    .tx-table tbody tr.highlight:hover td {
+        background: var(--tx-row-highlight);
+    }
+
+    .tx-type-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .tx-type-icon {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(11, 86, 179, 0.08);
+        color: var(--tx-primary);
+        border: 1px solid rgba(11, 86, 179, 0.12);
+    }
+
+    body.dark-mode .tx-type-icon {
+        background: rgba(143, 181, 255, 0.10);
+        border-color: rgba(143, 181, 255, 0.20);
+    }
+
+    .tx-type-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .tx-type-name {
+        font-weight: 700;
+        color: var(--tx-text);
+    }
+
+    .tx-type-sub {
+        font-size: 0.82rem;
+        color: var(--tx-text-soft);
+    }
+
+    .tx-date {
+        font-weight: 600;
+        color: var(--tx-primary);
+        white-space: nowrap;
+    }
+
+    .tx-reference {
+        font-weight: 600;
+        color: var(--tx-text);
+        font-family: monospace;
+        font-size: 0.92rem;
+    }
+
+    .tx-ref {
+        background: rgba(11, 86, 179, 0.08);
+        padding: 5px 9px;
+        border-radius: 8px;
+        display: inline-block;
+    }
+
+    body.dark-mode .tx-ref {
+        background: rgba(143, 181, 255, 0.12);
+    }
+
+    .tx-beneficiary {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .tx-beneficiary-name {
+        font-weight: 700;
+        color: var(--tx-text);
+    }
+
+    .tx-beneficiary-sub {
+        font-size: 0.82rem;
+        color: var(--tx-text-soft);
+    }
+
+    .tx-amount {
+        font-weight: 800;
+        white-space: nowrap;
+        color: var(--tx-text);
+    }
+
+    .tx-reason {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .tx-reason-main {
+        color: var(--tx-text);
         font-weight: 600;
     }
 
-    body.dark-mode .stat-card h3,
-    body.dark-mode .section-note,
-    body.dark-mode .filter-note,
-    body.dark-mode .empty-state,
-    body.dark-mode .tx-subtext,
-    body.dark-mode .filter-label,
-    body.dark-mode .results-note {
-        color: #cbd5e1;
+    .tx-reason-sub {
+        font-size: 0.82rem;
+        color: var(--tx-text-soft);
     }
 
-    .stat-card .value {
-        font-size: 30px;
-        font-weight: bold;
-        color: #163d7a;
-    }
-
-    body.dark-mode .stat-card .value,
-    body.dark-mode .section h3,
-    body.dark-mode .tx-main {
-        color: #bfdbfe;
-    }
-
-    .section {
-        background: white;
-        border-radius: 18px;
-        padding: 24px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-        margin-bottom: 24px;
-    }
-
-    .section h3 {
-        margin-top: 0;
-        margin-bottom: 18px;
-        color: #163d7a;
-        font-size: 24px;
-    }
-
-    .section-note {
-        color: #6b7280;
-        font-size: 13px;
-        margin-top: -8px;
-        margin-bottom: 18px;
-    }
-
-    .filters-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto;
-        gap: 14px;
-        margin-bottom: 18px;
-        align-items: end;
-    }
-
-    .filter-group {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .filter-label {
-        font-size: 13px;
-        font-weight: 700;
-        color: #475569;
-    }
-
-    .filter-input,
-    .filter-select {
-        width: 100%;
-        padding: 11px 12px;
-        border: 1px solid #cbd5e1;
-        border-radius: 12px;
-        font-size: 14px;
-        background: #fff;
-        color: #111827;
-    }
-
-    body.dark-mode .filter-input,
-    body.dark-mode .filter-select {
-        background: #111827;
-        color: #f3f4f6;
-        border-color: #334155;
-    }
-
-    .filter-input:focus,
-    .filter-select:focus {
-        outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
-
-    .clear-btn,
-    .export-btn {
-        border: none;
-        border-radius: 12px;
-        padding: 11px 16px;
-        font-weight: 700;
-        cursor: pointer;
-        height: 44px;
-        white-space: nowrap;
-    }
-
-    .clear-btn {
-        background: #e2e8f0;
-        color: #0f172a;
-    }
-
-    .export-btn {
-        background: linear-gradient(135deg, #1d4ed8, #1e40af);
-        color: white;
-    }
-
-    body.dark-mode .clear-btn {
-        background: #334155;
-        color: #f8fafc;
-    }
-
-    body.dark-mode .export-btn {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    }
-
-    .clear-btn:hover,
-    .export-btn:hover {
-        opacity: 0.92;
-    }
-
-    .results-note {
-        font-size: 13px;
-        color: #64748b;
-        margin-bottom: 16px;
-    }
-
-    .table-wrap {
-        overflow-x: auto;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        min-width: 1280px;
-    }
-
-    body.dark-mode table {
-        background: #111827;
-    }
-
-    th, td {
-        padding: 14px 12px;
-        border-bottom: 1px solid #e5e7eb;
-        text-align: left;
-        font-size: 14px;
-        vertical-align: top;
-    }
-
-    body.dark-mode th,
-    body.dark-mode td {
-        border-bottom-color: #334155;
-    }
-
-    th {
-        background: #eaf2ff;
-        color: #163d7a;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-    }
-
-    body.dark-mode th {
-        background: #0f172a;
-        color: #bfdbfe;
-    }
-
-    tr:hover {
-        background: #f9fbff;
-    }
-
-    body.dark-mode tr:hover {
-        background: rgba(30, 41, 59, 0.55);
-    }
-
-    .badge {
-        padding: 6px 10px;
+    .tx-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 12px;
         border-radius: 999px;
-        font-size: 12px;
-        font-weight: bold;
-        display: inline-block;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
         white-space: nowrap;
     }
 
-    .badge-completed {
-        background: #dcfce7;
-        color: #166534;
+    .tx-status.processed,
+    .tx-status.completed {
+        background: var(--tx-processed-bg);
+        color: var(--tx-processed-text);
     }
 
-    .badge-pending {
-        background: #fef3c7;
-        color: #92400e;
+    .tx-status.pending {
+        background: var(--tx-pending-bg);
+        color: var(--tx-pending-text);
     }
 
-    .badge-failed {
-        background: #fee2e2;
-        color: #991b1b;
+    .tx-status.failed {
+        background: var(--tx-failed-bg);
+        color: var(--tx-failed-text);
     }
 
-    .badge-internal {
-        background: #dbeafe;
-        color: #1d4ed8;
+    .tx-empty {
+        padding: 28px 20px 32px;
+        color: var(--tx-text-soft);
     }
 
-    .badge-local {
-        background: #ede9fe;
-        color: #6d28d9;
+    .tx-empty-box {
+        background: var(--tx-surface-2);
+        border: 1px dashed var(--tx-border);
+        border-radius: 16px;
+        padding: 22px;
+        text-align: center;
     }
 
-    .badge-bill {
-        background: #fce7f3;
-        color: #be185d;
-    }
-
-    .badge-deposit {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .amount-positive {
-        color: #166534;
-        font-weight: bold;
-    }
-
-    .amount-negative {
-        color: #b91c1c;
-        font-weight: bold;
-    }
-
-    .empty-state {
-        color: #6b7280;
-        font-size: 15px;
-    }
-
-    .filter-note {
-        font-size: 13px;
-        color: #6b7280;
-        margin-top: 10px;
-    }
-
-    .tx-main {
-        font-weight: 700;
-        color: #111827;
-        margin-bottom: 4px;
-    }
-
-    .tx-subtext {
-        font-size: 12px;
-        color: #6b7280;
-        line-height: 1.4;
-    }
-
-    .muted {
-        color: #9ca3af;
-    }
-
-    .hidden-row {
-        display: none;
+    .tx-hidden {
+        display: none !important;
     }
 
     @media (max-width: 1100px) {
-        .filters-grid {
+        .tx-summary {
             grid-template-columns: 1fr 1fr;
         }
 
-        .clear-btn,
-        .export-btn {
-            width: 100%;
+        .tx-filters {
+            grid-template-columns: 1fr 1fr;
         }
     }
 
     @media (max-width: 700px) {
-        .filters-grid {
+        .tx-summary {
             grid-template-columns: 1fr;
+        }
+
+        .tx-filters {
+            grid-template-columns: 1fr;
+        }
+
+        .tx-table-wrap {
+            overflow-x: auto;
+        }
+
+        .tx-table {
+            min-width: 1100px;
         }
     }
 </style>
 @endpush
 
 @section('content')
-    @php
-        $transactionCount = count($transactions ?? []);
-        $totalIn = 0;
-        $totalOut = 0;
-        $internalCount = 0;
-        $localCount = 0;
-        $billCount = 0;
+@php
+    $transactionCount = count($transactions ?? []);
+    $totalIn = 0;
+    $totalOut = 0;
+    $selectedAccountNumber = null;
 
-        foreach (($transactions ?? []) as $transaction) {
-            $transactionType = strtolower($transaction['transactionType'] ?? '');
-            $transferType = strtolower($transaction['transferType'] ?? '');
-            $amount = (float)($transaction['amount'] ?? 0);
-
-            if ($transactionType === 'deposit' || $transferType === 'deposit') {
-                $totalIn += $amount;
-            } else {
-                $totalOut += $amount;
-            }
-
-            if ($transferType === 'internal') {
-                $internalCount++;
-            } elseif ($transferType === 'localbank') {
-                $localCount++;
-            } elseif ($transferType === 'billpayment') {
-                $billCount++;
-            }
+    foreach (($accounts ?? []) as $acc) {
+        if ((string)($selectedAccountId ?? '') === (string)($acc['id'] ?? '')) {
+            $selectedAccountNumber = $acc['accountNumber'] ?? null;
+            break;
         }
+    }
 
-        $accountOptions = [];
-        foreach (($transactions ?? []) as $transaction) {
-            $accountNumber = $transaction['account']['accountNumber'] ?? null;
-            if ($accountNumber && !in_array($accountNumber, $accountOptions)) {
-                $accountOptions[] = $accountNumber;
-            }
+    foreach (($transactions ?? []) as $transaction) {
+        $transactionType = strtolower($transaction['transactionType'] ?? '');
+        $transferType = strtolower($transaction['transferType'] ?? '');
+        $amount = (float) ($transaction['amount'] ?? 0);
+
+        if ($transactionType === 'deposit' || $transferType === 'deposit') {
+            $totalIn += $amount;
+        } else {
+            $totalOut += $amount;
         }
-        sort($accountOptions);
-    @endphp
+    }
+@endphp
 
-    <div class="stats-row">
-        <div class="stat-card">
-            <h3>Total Transactions</h3>
-            <div class="value">{{ $transactionCount }}</div>
+<div class="tx-page">
+    <div class="tx-card">
+        <div class="tx-card-header">
+            <div>
+                <h3>Transaction Register</h3>
+                <p>View activity by account, search references, and monitor processed and pending items.</p>
+            </div>
+
+            <div class="tx-account-switch">
+                <select class="tx-select" onchange="window.location=this.value;">
+                    <option value="{{ route('transactions') }}" {{ empty($selectedAccountId) ? 'selected' : '' }}>
+                        All Linked Accounts
+                    </option>
+                    @foreach(($accounts ?? []) as $account)
+                        <option
+                            value="{{ route('transactions', ['account_id' => $account['id']]) }}"
+                            {{ (string)($selectedAccountId ?? '') === (string)($account['id'] ?? '') ? 'selected' : '' }}
+                        >
+                            {{ $account['accountNumber'] ?? 'N/A' }} - {{ $account['accountType'] ?? 'Account' }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
         </div>
 
-        <div class="stat-card">
-            <h3>Total Incoming</h3>
-            <div class="value">${{ number_format($totalIn, 2) }}</div>
-        </div>
-
-        <div class="stat-card">
-            <h3>Total Outgoing</h3>
-            <div class="value">${{ number_format($totalOut, 2) }}</div>
-        </div>
-
-        <div class="stat-card">
-            <h3>Internal Transfers</h3>
-            <div class="value">{{ $internalCount }}</div>
-        </div>
-
-        <div class="stat-card">
-            <h3>Local Bank Transfers</h3>
-            <div class="value">{{ $localCount }}</div>
-        </div>
-
-        <div class="stat-card">
-            <h3>Bill Payments</h3>
-            <div class="value">{{ $billCount }}</div>
-        </div>
-    </div>
-
-    <section class="section">
-        <h3>All Transactions</h3>
-        <p class="section-note">Filter transactions by keyword, type, status, account, or date.</p>
-
-        @if(count($transactions) > 0)
-            <div class="filters-grid">
-                <div class="filter-group">
-                    <label class="filter-label" for="searchFilter">Search</label>
-                    <input
-                        type="text"
-                        id="searchFilter"
-                        class="filter-input"
-                        placeholder="Search reference, institution, beneficiary, description..."
-                    >
-                </div>
-
-                <div class="filter-group">
-                    <label class="filter-label" for="typeFilter">Transfer Type</label>
-                    <select id="typeFilter" class="filter-select">
-                        <option value="">All Types</option>
-                        <option value="internal">Internal</option>
-                        <option value="localbank">Local Bank</option>
-                        <option value="billpayment">Bill Payment</option>
-                        <option value="deposit">Deposit</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label class="filter-label" for="statusFilter">Status</label>
-                    <select id="statusFilter" class="filter-select">
-                        <option value="">All Statuses</option>
-                        <option value="completed">Completed</option>
-                        <option value="pending">Pending</option>
-                        <option value="failed">Failed</option>
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label class="filter-label" for="accountFilter">Account</label>
-                    <select id="accountFilter" class="filter-select">
-                        <option value="">All Accounts</option>
-                        @foreach($accountOptions as $accountNumber)
-                            <option value="{{ strtolower($accountNumber) }}">{{ $accountNumber }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label class="filter-label" for="dateFilter">Date</label>
-                    <input type="date" id="dateFilter" class="filter-input">
-                </div>
-
-                <div class="filter-group">
-                    <label class="filter-label">&nbsp;</label>
-                    <button type="button" id="clearFilters" class="clear-btn">Clear Filters</button>
-                </div>
-
-                <div class="filter-group">
-                    <label class="filter-label">&nbsp;</label>
-                    <button type="button" id="exportCsvBtn" class="export-btn">Export CSV</button>
+        <div class="tx-summary">
+            <div class="tx-summary-box">
+                <p class="label">Transactions Shown</p>
+                <p class="value">{{ $transactionCount }}</p>
+                <div class="sub">
+                    {{ $selectedAccountNumber ? 'Account ' . $selectedAccountNumber : 'All linked customer accounts' }}
                 </div>
             </div>
 
-            <div class="results-note">
-                Showing <strong id="visibleCount">{{ $transactionCount }}</strong> of <strong>{{ $transactionCount }}</strong> transactions.
+            <div class="tx-summary-box">
+                <p class="label">Total Incoming</p>
+                <p class="value">{{ number_format($totalIn, 2) }} FJD</p>
+                <div class="sub">Credits and received deposits</div>
             </div>
 
-            <div class="table-wrap">
-                <table>
+            <div class="tx-summary-box">
+                <p class="label">Total Outgoing</p>
+                <p class="value">{{ number_format($totalOut, 2) }} FJD</p>
+                <div class="sub">Transfers and bill payments</div>
+            </div>
+
+            <div class="tx-summary-box">
+                <p class="label">Current View</p>
+                <p class="value" style="font-size:1.05rem;">
+                    {{ $selectedAccountNumber ? 'Account ' . $selectedAccountNumber : 'All Accounts' }}
+                </p>
+                <div class="sub">Switch account from the selector above</div>
+            </div>
+        </div>
+
+        <div class="tx-filters">
+            <input
+                type="text"
+                id="txSearch"
+                class="tx-input"
+                placeholder="Search beneficiary, reason, account, reference"
+            >
+
+            <select id="txStatusFilter" class="tx-select">
+                <option value="">All Statuses</option>
+                <option value="processed">Processed</option>
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+            </select>
+
+            <select id="txAccountFilter" class="tx-select">
+                <option value="">All Accounts In Current View</option>
+                @foreach(($accounts ?? []) as $account)
+                    <option value="{{ strtolower($account['accountNumber'] ?? '') }}">
+                        {{ $account['accountNumber'] ?? 'N/A' }}
+                    </option>
+                @endforeach
+            </select>
+
+            <input type="date" id="txDateFilter" class="tx-input">
+
+            <button type="button" id="txClearFilters" class="tx-btn tx-btn-primary">
+                Clear Filters
+            </button>
+        </div>
+
+        <div id="txResults" class="tx-results">
+            Showing {{ $transactionCount }} of {{ $transactionCount }} transactions
+        </div>
+
+        <div class="tx-table-wrap">
+            @if($transactionCount > 0)
+                <table class="tx-table">
                     <thead>
                         <tr>
-                            <th>Reference</th>
-                            <th>Account</th>
                             <th>Type</th>
-                            <th>Transfer Mode</th>
-                            <th>Institution / Biller</th>
-                            <th>Beneficiary</th>
-                            <th>Destination</th>
+                            <th>Date</th>
+                            <th>Reference</th>
+                            <th>Beneficiary / From</th>
                             <th>Amount</th>
+                            <th>Details</th>
                             <th>Status</th>
-                            <th>Date & Time</th>
-                            <th>Description</th>
                         </tr>
                     </thead>
-                    <tbody id="transactionsTableBody">
-                        @foreach($transactions as $transaction)
+                    <tbody id="transactionTableBody">
+                        @foreach($transactions as $index => $transaction)
                             @php
-                                $transactionType = $transaction['transactionType'] ?? '-';
-                                $transferType = $transaction['transferType'] ?? '-';
-                                $status = strtolower($transaction['transactionStatus'] ?? 'completed');
-                                $amount = (float)($transaction['amount'] ?? 0);
+                                $transactionType = strtolower($transaction['transactionType'] ?? '-');
+                                $transferType = strtolower($transaction['transferType'] ?? '-');
+                                $statusRaw = strtolower($transaction['transactionStatus'] ?? 'completed');
+                                $amount = (float) ($transaction['amount'] ?? 0);
 
-                                $isIncoming = strtolower($transactionType) === 'deposit' || strtolower($transferType) === 'deposit';
-                                $amountClass = $isIncoming ? 'amount-positive' : 'amount-negative';
+                                $reference = $transaction['referenceNumber'] ?? '-';
 
-                                $institution = $transaction['destinationInstitution'] ?? 'BoF';
-                                $beneficiary = $transaction['beneficiaryName'] ?? '-';
-                                $destinationAccount = $transaction['destinationAccountNumber'] ?? '-';
-                                $accountNumber = $transaction['account']['accountNumber'] ?? '-';
+                                $accountNumber = $transaction['account']['accountNumber']
+                                    ?? $transaction['sourceAccount']['accountNumber']
+                                    ?? $transaction['destinationAccount']['accountNumber']
+                                    ?? '-';
 
-                                $transferTypeLower = strtolower($transferType);
-                                $dateValue = !empty($transaction['transactionDate'])
-                                    ? \Carbon\Carbon::parse($transaction['transactionDate'])->format('Y-m-d')
-                                    : '';
+                                $beneficiary = $transaction['beneficiaryName']
+                                    ?? $transaction['billerName']
+                                    ?? ($transactionType === 'deposit' ? 'Incoming Funds' : '-');
+
+                                $reason = $transaction['description'] ?? ($transaction['remarks'] ?? '-');
+
+                                $dateObject = !empty($transaction['transactionDate'])
+                                    ? \Carbon\Carbon::parse($transaction['transactionDate'])
+                                    : null;
+
+                                $displayDate = $dateObject ? $dateObject->format('d/m/Y') : '-';
+                                $dateValue = $dateObject ? $dateObject->format('Y-m-d') : '';
+
+                                $typeLabel = match($transferType) {
+                                    'billpayment' => 'Bill Payment',
+                                    'localbank' => 'Local Bank Transfer',
+                                    'deposit' => 'Deposit',
+                                    'internal' => 'Internal Transfer',
+                                    default => ucfirst($transferType ?: $transactionType ?: 'Transaction'),
+                                };
+
+                                $typeSub = 'Acct: ' . $accountNumber;
+
+                                $reasonSub = $transaction['destinationInstitution']
+                                    ?? ($transaction['destinationAccountNumber'] ?? '');
+
+                                $searchBlob = strtolower(trim(
+                                    ($beneficiary ?? '') . ' ' .
+                                    ($reason ?? '') . ' ' .
+                                    ($accountNumber ?? '') . ' ' .
+                                    ($reference ?? '') . ' ' .
+                                    ($transferType ?? '') . ' ' .
+                                    ($reasonSub ?? '')
+                                ));
                             @endphp
 
                             <tr
-                                class="transaction-row"
-                                data-search="{{ strtolower(
-                                    ($transaction['referenceNumber'] ?? '') . ' ' .
-                                    ($transactionType ?? '') . ' ' .
-                                    ($transferType ?? '') . ' ' .
-                                    ($institution ?? '') . ' ' .
-                                    ($beneficiary ?? '') . ' ' .
-                                    ($destinationAccount ?? '') . ' ' .
-                                    ($transaction['description'] ?? '') . ' ' .
-                                    ($transaction['remarks'] ?? '') . ' ' .
-                                    ($accountNumber ?? '')
-                                ) }}"
-                                data-type="{{ strtolower($transferType) }}"
-                                data-status="{{ strtolower($transaction['transactionStatus'] ?? 'completed') }}"
+                                class="{{ $index === 0 ? 'highlight' : '' }}"
+                                data-status="{{ $statusRaw }}"
                                 data-account="{{ strtolower($accountNumber) }}"
                                 data-date="{{ $dateValue }}"
-                                data-reference="{{ $transaction['referenceNumber'] ?? '-' }}"
-                                data-account-number="{{ $accountNumber }}"
-                                data-transaction-type="{{ $transactionType }}"
-                                data-transfer-type="{{ $transferType }}"
-                                data-institution="{{ $institution }}"
-                                data-beneficiary="{{ $beneficiary }}"
-                                data-destination="{{ $destinationAccount }}"
-                                data-amount="{{ number_format($amount, 2, '.', '') }}"
-                                data-status-text="{{ $transaction['transactionStatus'] ?? 'Completed' }}"
-                                data-date-text="{{ !empty($transaction['transactionDate']) ? \Carbon\Carbon::parse($transaction['transactionDate'])->format('d M Y') : '-' }}"
-                                data-time-text="{{ !empty($transaction['transactionDate']) ? \Carbon\Carbon::parse($transaction['transactionDate'])->format('h:i:s A') : '-' }}"
-                                data-description="{{ $transaction['description'] ?? '-' }}"
-                                data-remarks="{{ $transaction['remarks'] ?? 'No additional remarks' }}"
-                                data-direction="{{ $isIncoming ? 'Incoming' : 'Outgoing' }}"
+                                data-search="{{ $searchBlob }}"
                             >
                                 <td>
-                                    <div class="tx-main">{{ $transaction['referenceNumber'] ?? '-' }}</div>
-                                    <div class="tx-subtext">Ref No.</div>
+                                    <div class="tx-type-wrap">
+                                        <span class="tx-type-icon" title="{{ $typeLabel }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                                @if($transferType === 'billpayment')
+                                                    <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"></path>
+                                                    <path d="M9 8h6M9 12h6"></path>
+                                                @elseif($transferType === 'localbank')
+                                                    <path d="M3 10l9-6 9 6"></path>
+                                                    <path d="M5 10v8M9 10v8M15 10v8M19 10v8"></path>
+                                                    <path d="M3 18h18"></path>
+                                                @elseif($transferType === 'deposit')
+                                                    <path d="M12 4v16"></path>
+                                                    <path d="M7 9l5-5 5 5"></path>
+                                                @else
+                                                    <path d="M3 11l9-8 9 8"></path>
+                                                    <path d="M5 10v10h14V10"></path>
+                                                    <path d="M9 20v-6h6v6"></path>
+                                                @endif
+                                            </svg>
+                                        </span>
+
+                                        <div class="tx-type-meta">
+                                            <span class="tx-type-name">{{ $typeLabel }}</span>
+                                            <span class="tx-type-sub">{{ $typeSub }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td class="tx-date">{{ $displayDate }}</td>
+
+                                <td class="tx-reference">
+                                    <span class="tx-ref">{{ $reference }}</span>
                                 </td>
 
                                 <td>
-                                    <div class="tx-main">{{ $accountNumber }}</div>
-                                    <div class="tx-subtext">{{ $transaction['account']['accountType'] ?? 'Linked Account' }}</div>
+                                    <div class="tx-beneficiary">
+                                        <span class="tx-beneficiary-name">{{ $beneficiary }}</span>
+                                        <span class="tx-beneficiary-sub">
+                                            {{ $transaction['destinationAccountNumber'] ?? $transaction['destinationInstitution'] ?? 'Recorded transaction' }}
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <td class="tx-amount">{{ number_format($amount, 2) }} FJD</td>
+
+                                <td>
+                                    <div class="tx-reason">
+                                        <span class="tx-reason-main">{{ $reason }}</span>
+                                        <span class="tx-reason-sub">
+                                            {{ !empty($reasonSub) ? $reasonSub : 'No additional details' }}
+                                        </span>
+                                    </div>
                                 </td>
 
                                 <td>
-                                    <div class="tx-main">{{ $transactionType }}</div>
-                                    <div class="tx-subtext">Base type</div>
-                                </td>
-
-                                <td>
-                                    @if($transferTypeLower === 'internal')
-                                        <span class="badge badge-internal">Internal</span>
-                                    @elseif($transferTypeLower === 'localbank')
-                                        <span class="badge badge-local">Local Bank</span>
-                                    @elseif($transferTypeLower === 'billpayment')
-                                        <span class="badge badge-bill">Bill Payment</span>
-                                    @elseif($transferTypeLower === 'deposit')
-                                        <span class="badge badge-deposit">Deposit</span>
-                                    @else
-                                        <span class="badge badge-completed">{{ $transferType }}</span>
-                                    @endif
-                                </td>
-
-                                <td>
-                                    <div class="tx-main">{{ $institution ?: '-' }}</div>
-                                    <div class="tx-subtext">Institution</div>
-                                </td>
-
-                                <td>
-                                    <div class="tx-main">{{ $beneficiary ?: '-' }}</div>
-                                    <div class="tx-subtext">Beneficiary</div>
-                                </td>
-
-                                <td>
-                                    <div class="tx-main">{{ $destinationAccount ?: '-' }}</div>
-                                    <div class="tx-subtext">Destination account / reference</div>
-                                </td>
-
-                                <td class="{{ $amountClass }}">
-                                    {{ $isIncoming ? '+' : '-' }}${{ number_format($amount, 2) }}
-                                </td>
-
-                                <td>
-                                    @if($status === 'completed')
-                                        <span class="badge badge-completed">Completed</span>
-                                    @elseif($status === 'pending')
-                                        <span class="badge badge-pending">Pending</span>
-                                    @elseif($status === 'failed')
-                                        <span class="badge badge-failed">Failed</span>
-                                    @else
-                                        <span class="badge badge-completed">{{ $transaction['transactionStatus'] ?? 'Completed' }}</span>
-                                    @endif
-                                </td>
-
-                                <td>
-                                    @if(!empty($transaction['transactionDate']))
-                                        <div class="tx-main">{{ \Carbon\Carbon::parse($transaction['transactionDate'])->format('d M Y') }}</div>
-                                        <div class="tx-subtext">{{ \Carbon\Carbon::parse($transaction['transactionDate'])->format('h:i:s A') }}</div>
-                                    @else
-                                        <span class="muted">-</span>
-                                    @endif
-                                </td>
-
-                                <td>
-                                    <div class="tx-main">{{ $transaction['description'] ?? '-' }}</div>
-                                    <div class="tx-subtext">{{ $transaction['remarks'] ?? 'No additional remarks' }}</div>
+                                    <span class="tx-status {{ $statusRaw }}">
+                                        {{ strtoupper($statusRaw === 'completed' ? 'processed' : $statusRaw) }}
+                                    </span>
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
-            </div>
 
-            <p class="filter-note">Incoming transactions are shown with a + amount in green, while outgoing transactions are shown with a - amount in red.</p>
-        @else
-            <p class="empty-state">No transactions found for your account.</p>
-        @endif
-    </section>
+                <div id="txNoMatch" class="tx-empty tx-hidden">
+                    <div class="tx-empty-box">
+                        No transactions match the selected filters.
+                    </div>
+                </div>
+            @else
+                <div class="tx-empty">
+                    <div class="tx-empty-box">
+                        No transactions found for the selected account view.
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
 <script>
-    const searchFilter = document.getElementById('searchFilter');
-    const typeFilter = document.getElementById('typeFilter');
-    const statusFilter = document.getElementById('statusFilter');
-    const accountFilter = document.getElementById('accountFilter');
-    const dateFilter = document.getElementById('dateFilter');
-    const clearFilters = document.getElementById('clearFilters');
-    const exportCsvBtn = document.getElementById('exportCsvBtn');
-    const rows = document.querySelectorAll('.transaction-row');
-    const visibleCount = document.getElementById('visibleCount');
+    (function () {
+        const txSearch = document.getElementById('txSearch');
+        const txStatusFilter = document.getElementById('txStatusFilter');
+        const txAccountFilter = document.getElementById('txAccountFilter');
+        const txDateFilter = document.getElementById('txDateFilter');
+        const txClearFilters = document.getElementById('txClearFilters');
+        const txNoMatch = document.getElementById('txNoMatch');
+        const txResults = document.getElementById('txResults');
+        const txRows = Array.from(document.querySelectorAll('#transactionTableBody tr'));
 
-    function applyTransactionFilters() {
-        const searchValue = (searchFilter?.value || '').toLowerCase().trim();
-        const typeValue = (typeFilter?.value || '').toLowerCase();
-        const statusValue = (statusFilter?.value || '').toLowerCase();
-        const accountValue = (accountFilter?.value || '').toLowerCase();
-        const dateValue = (dateFilter?.value || '').toLowerCase();
+        function statusMatches(rowStatus, selectedStatus) {
+            if (!selectedStatus) return true;
 
-        let count = 0;
-
-        rows.forEach((row) => {
-            const rowSearch = row.dataset.search || '';
-            const rowType = row.dataset.type || '';
-            const rowStatus = row.dataset.status || '';
-            const rowAccount = row.dataset.account || '';
-            const rowDate = row.dataset.date || '';
-
-            const matchesSearch = !searchValue || rowSearch.includes(searchValue);
-            const matchesType = !typeValue || rowType === typeValue;
-            const matchesStatus = !statusValue || rowStatus === statusValue;
-            const matchesAccount = !accountValue || rowAccount === accountValue;
-            const matchesDate = !dateValue || rowDate === dateValue;
-
-            const isVisible = matchesSearch && matchesType && matchesStatus && matchesAccount && matchesDate;
-
-            row.classList.toggle('hidden-row', !isVisible);
-
-            if (isVisible) {
-                count++;
+            if (selectedStatus === 'processed') {
+                return rowStatus === 'processed' || rowStatus === 'completed';
             }
-        });
 
-        if (visibleCount) {
-            visibleCount.textContent = count;
-        }
-    }
+            if (selectedStatus === 'completed') {
+                return rowStatus === 'completed' || rowStatus === 'processed';
+            }
 
-    function csvEscape(value) {
-        const stringValue = String(value ?? '');
-        return `"${stringValue.replace(/"/g, '""')}"`;
-    }
-
-    function exportVisibleTransactionsToCsv() {
-        const visibleRows = Array.from(document.querySelectorAll('.transaction-row'))
-            .filter(row => !row.classList.contains('hidden-row'));
-
-        if (visibleRows.length === 0) {
-            alert('There are no filtered transactions to export.');
-            return;
+            return rowStatus === selectedStatus;
         }
 
-        const headers = [
-            'Reference Number',
-            'Account Number',
-            'Transaction Type',
-            'Transfer Type',
-            'Institution / Biller',
-            'Beneficiary',
-            'Destination Account / Reference',
-            'Amount',
-            'Direction',
-            'Transaction Status',
-            'Date',
-            'Time',
-            'Description',
-            'Remarks'
-        ];
+        function applyTransactionFilters() {
+            const searchValue = (txSearch?.value || '').toLowerCase().trim();
+            const statusValue = (txStatusFilter?.value || '').toLowerCase().trim();
+            const accountValue = (txAccountFilter?.value || '').toLowerCase().trim();
+            const dateValue = (txDateFilter?.value || '').trim();
 
-        const csvRows = [headers.map(csvEscape).join(',')];
+            let visibleCount = 0;
 
-        visibleRows.forEach((row) => {
-            const data = [
-                row.dataset.reference,
-                row.dataset.accountNumber,
-                row.dataset.transactionType,
-                row.dataset.transferType,
-                row.dataset.institution,
-                row.dataset.beneficiary,
-                row.dataset.destination,
-                row.dataset.amount,
-                row.dataset.direction,
-                row.dataset.statusText,
-                row.dataset.dateText,
-                row.dataset.timeText,
-                row.dataset.description,
-                row.dataset.remarks
-            ];
+            txRows.forEach((row) => {
+                const rowSearch = (row.dataset.search || '').toLowerCase();
+                const rowStatus = (row.dataset.status || '').toLowerCase();
+                const rowAccount = (row.dataset.account || '').toLowerCase();
+                const rowDate = row.dataset.date || '';
 
-            csvRows.push(data.map(csvEscape).join(','));
-        });
+                const matchesSearch = !searchValue || rowSearch.includes(searchValue);
+                const matchesStatus = statusMatches(rowStatus, statusValue);
+                const matchesAccount = !accountValue || rowAccount === accountValue;
+                const matchesDate = !dateValue || rowDate === dateValue;
 
-        const csvContent = csvRows.join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
+                const shouldShow = matchesSearch && matchesStatus && matchesAccount && matchesDate;
 
-        const now = new Date();
-        const timestamp = [
-            now.getFullYear(),
-            String(now.getMonth() + 1).padStart(2, '0'),
-            String(now.getDate()).padStart(2, '0'),
-            '-',
-            String(now.getHours()).padStart(2, '0'),
-            String(now.getMinutes()).padStart(2, '0'),
-            String(now.getSeconds()).padStart(2, '0')
-        ].join('');
+                row.classList.toggle('tx-hidden', !shouldShow);
 
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `bof-transactions-${timestamp}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
+                if (shouldShow) visibleCount++;
+            });
 
-    [searchFilter, typeFilter, statusFilter, accountFilter, dateFilter].forEach((element) => {
-        if (element) {
-            element.addEventListener('input', applyTransactionFilters);
-            element.addEventListener('change', applyTransactionFilters);
+            if (txNoMatch) {
+                txNoMatch.classList.toggle('tx-hidden', visibleCount !== 0);
+            }
+
+            if (txResults) {
+                txResults.textContent = `Showing ${visibleCount} of ${txRows.length} transactions`;
+            }
         }
-    });
 
-    if (clearFilters) {
-        clearFilters.addEventListener('click', () => {
-            if (searchFilter) searchFilter.value = '';
-            if (typeFilter) typeFilter.value = '';
-            if (statusFilter) statusFilter.value = '';
-            if (accountFilter) accountFilter.value = '';
-            if (dateFilter) dateFilter.value = '';
-            applyTransactionFilters();
-        });
-    }
+        if (txSearch) txSearch.addEventListener('input', applyTransactionFilters);
+        if (txStatusFilter) txStatusFilter.addEventListener('change', applyTransactionFilters);
+        if (txAccountFilter) txAccountFilter.addEventListener('change', applyTransactionFilters);
+        if (txDateFilter) txDateFilter.addEventListener('change', applyTransactionFilters);
 
-    if (exportCsvBtn) {
-        exportCsvBtn.addEventListener('click', exportVisibleTransactionsToCsv);
-    }
+        if (txClearFilters) {
+            txClearFilters.addEventListener('click', function () {
+                if (txSearch) txSearch.value = '';
+                if (txStatusFilter) txStatusFilter.value = '';
+                if (txAccountFilter) txAccountFilter.value = '';
+                if (txDateFilter) txDateFilter.value = '';
+                applyTransactionFilters();
+            });
+        }
 
-    applyTransactionFilters();
+        applyTransactionFilters();
+    })();
 </script>
 @endpush

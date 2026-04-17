@@ -51,9 +51,9 @@
     }
 
     .content-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 24px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
     }
 
     .section {

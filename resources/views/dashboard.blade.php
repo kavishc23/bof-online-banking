@@ -5,781 +5,578 @@
 @endphp
 
 @section('topcard')
-    <h2>Welcome back, {{ $customer['firstName'] ?? 'Customer' }}</h2>
-    <p>View your balances, monitor account activity, manage payments, and keep track of your recent banking transactions in one place.</p>
+    <div class="db-hero">
+        <div class="db-hero-copy">
+            <div class="db-hero-eyebrow">Retail Banking Dashboard</div>
+            <h2>Welcome back, {{ session('customer.firstName', session('user.username', 'Customer')) }}</h2>
+            <p>View your balances, track recent activity, and access your banking tools in one place.</p>
+
+            <div class="db-hero-actions">
+                <a href="{{ route('transfer') }}" class="db-btn db-btn-primary">Transfer Money</a>
+                <a href="{{ route('bill-payment') }}" class="db-btn db-btn-secondary">Pay Bills</a>
+            </div>
+        </div>
+
+        <div class="db-hero-panel">
+            <div class="db-hero-stat">
+                <span>Customer Status</span>
+                <strong>Active</strong>
+            </div>
+            <div class="db-hero-stat">
+                <span>Workspace</span>
+                <strong>Secure Session</strong>
+            </div>
+            <div class="db-hero-stat">
+                <span>Last Sign In</span>
+                <strong>{{ now()->format('d M Y') }}</strong>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('styles')
 <style>
-    .dashboard-grid {
+    .db-hero {
         display: grid;
-        grid-template-columns: 1.6fr 1fr;
-        gap: 24px;
-        margin-bottom: 24px;
+        grid-template-columns: 1.5fr 0.9fr;
+        gap: 22px;
+        align-items: center;
     }
 
-    .left-stack,
-    .right-stack {
-        display: flex;
-    flex-direction: column;
-        gap: 24px;
-    }
-
-    .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-        gap: 18px;
-        margin-bottom: 24px;
-    }
-
-    .summary-card {
-        background: white;
-        border-radius: 18px;
-        padding: 22px;
-        box-shadow: 0 8px 22px rgba(0,0,0,0.07);
-        border: 1px solid rgba(226, 232, 240, 0.75);
-    }
-
-    body.dark-mode .summary-card,
-    body.dark-mode .dashboard-panel,
-    body.dark-mode .account-mini-card,
-    body.dark-mode .insight-card,
-    body.dark-mode .activity-item {
-        background: rgba(17, 24, 39, 0.92);
-        border-color: rgba(51, 65, 85, 0.85);
-    }
-
-    .summary-card h3 {
-        margin: 0 0 10px;
-        color: #64748b;
-        font-size: 14px;
+    .db-hero-eyebrow {
+        display: inline-block;
+        margin-bottom: 10px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.10);
+        color: var(--primary-mid);
+        font-size: 12px;
         font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
     }
 
-    .summary-value {
-        font-size: 30px;
-        font-weight: 800;
-        color: #163d7a;
+    .db-hero h2 {
+        margin: 0 0 12px;
+        font-size: 2.25rem;
         line-height: 1.1;
+        font-weight: 800;
+        color: var(--primary-mid);
     }
 
-    .summary-subtext {
-        margin-top: 8px;
-        font-size: 13px;
-        color: #64748b;
+    .db-hero p {
+        margin: 0;
+        color: var(--text-soft);
+        font-size: 1rem;
+        line-height: 1.7;
+        max-width: 700px;
     }
 
-    body.dark-mode .summary-card h3,
-    body.dark-mode .summary-subtext,
-    body.dark-mode .panel-note,
-    body.dark-mode .account-mini-meta,
-    body.dark-mode .activity-subtext,
-    body.dark-mode .insight-text,
-    body.dark-mode .empty-state {
-        color: #cbd5e1;
+    .db-hero-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 22px;
     }
 
-    body.dark-mode .summary-value,
-    body.dark-mode .panel-title,
-    body.dark-mode .account-mini-title,
-    body.dark-mode .activity-title,
-    body.dark-mode .insight-title {
-        color: #bfdbfe;
+    .db-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 18px;
+        border-radius: 14px;
+        text-decoration: none;
+        font-weight: 700;
+        transition: 0.2s ease;
     }
 
-    .featured-card {
-        background: linear-gradient(135deg, #0b2147 0%, #163d7a 55%, #2563eb 100%);
-        color: white;
-        border-radius: 24px;
-        padding: 28px;
+    .db-btn-primary {
+        background: linear-gradient(135deg, var(--primary-light), #1e40af);
+        color: #fff;
+        box-shadow: 0 10px 22px rgba(29, 78, 216, 0.22);
+    }
+
+    .db-btn-primary:hover {
+        transform: translateY(-1px);
+    }
+
+    .db-btn-secondary {
+        background: rgba(37, 99, 235, 0.08);
+        color: var(--primary-mid);
+        border: 1px solid rgba(37, 99, 235, 0.12);
+    }
+
+    .db-btn-secondary:hover {
+        background: rgba(37, 99, 235, 0.14);
+    }
+
+    .db-hero-panel {
+        display: grid;
+        gap: 12px;
+    }
+
+    .db-hero-stat {
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.72);
+        border: 1px solid rgba(219, 234, 254, 0.95);
+        box-shadow: 0 10px 24px rgba(15, 43, 91, 0.05);
+    }
+
+    body.dark-mode .db-hero-stat {
+        background: rgba(17,24,39,0.84);
+        border-color: rgba(51,65,85,0.95);
+    }
+
+    .db-hero-stat span {
+        display: block;
+        color: var(--text-soft);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .db-hero-stat strong {
+        color: var(--text-main);
+        font-size: 1rem;
+        font-weight: 800;
+    }
+
+    .db-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 24px;
+        margin-top: 24px;
+    }
+
+    .db-stack {
+        display: grid;
+        gap: 24px;
+    }
+
+    .db-card {
+        background: var(--card-bg);
+        border: 1px solid rgba(229, 231, 235, 0.9);
+        border-radius: 22px;
+        padding: 22px;
+        box-shadow: var(--shadow-soft);
+        backdrop-filter: blur(8px);
+    }
+
+    body.dark-mode .db-card {
+        background: rgba(17,24,39,0.92);
+        border-color: rgba(51,65,85,0.95);
+    }
+
+    .db-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .db-card-head h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: var(--primary-mid);
+    }
+
+    .db-card-head a {
+        text-decoration: none;
+        color: var(--primary-light);
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    .db-account-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    }
+
+    .db-account-card {
         position: relative;
         overflow: hidden;
-        box-shadow: 0 18px 36px rgba(15, 43, 91, 0.24);
+        border-radius: 20px;
+        padding: 20px;
+        background: linear-gradient(135deg, #0b2147, #184691);
+        color: #fff;
+        min-height: 170px;
+        box-shadow: 0 14px 30px rgba(11, 33, 71, 0.22);
     }
 
-    .featured-card::before {
-        content: "";
-        position: absolute;
-        width: 260px;
-        height: 260px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.08);
-        top: -120px;
-        right: -100px;
-    }
-
-    .featured-card::after {
+    .db-account-card::after {
         content: "";
         position: absolute;
         width: 160px;
         height: 160px;
         border-radius: 50%;
-        background: rgba(255,255,255,0.06);
-        bottom: -70px;
-        right: 40px;
+        top: -50px;
+        right: -40px;
+        background: rgba(255,255,255,0.08);
     }
 
-    .featured-top {
+    .db-account-type {
         position: relative;
         z-index: 1;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.85;
+        margin-bottom: 18px;
+        font-weight: 700;
     }
 
-    .bank-chip {
+    .db-account-balance {
+        position: relative;
+        z-index: 1;
+        font-size: 1.9rem;
+        font-weight: 800;
+        margin-bottom: 14px;
+        letter-spacing: -0.02em;
+    }
+
+    .db-account-meta {
+        position: relative;
+        z-index: 1;
+        font-size: 0.95rem;
+        opacity: 0.92;
+        line-height: 1.6;
+    }
+
+    .db-feature-list {
+        display: grid;
+        gap: 14px;
+    }
+
+    .db-feature-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(37, 99, 235, 0.05);
+        border: 1px solid rgba(37, 99, 235, 0.08);
+    }
+
+    body.dark-mode .db-feature-item {
+        background: rgba(37, 99, 235, 0.08);
+        border-color: rgba(96,165,250,0.12);
+    }
+
+    .db-feature-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        background: rgba(255,255,255,0.12);
-        border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 999px;
-        padding: 8px 12px;
-        font-size: 12px;
-        font-weight: 700;
-        color: #e0ecff;
-    }
-
-    .live-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #4ade80;
-        box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.15);
-    }
-
-    .featured-label {
-        margin-top: 18px;
-        font-size: 13px;
-        color: #dbeafe;
-        position: relative;
-        z-index: 1;
-    }
-
-    .featured-balance {
-        margin-top: 8px;
-        font-size: 38px;
-        font-weight: 800;
-        position: relative;
-        z-index: 1;
-    }
-
-    .featured-number {
-        margin-top: 28px;
-        font-size: 22px;
-        letter-spacing: 3px;
-        font-weight: 700;
-        color: #f8fbff;
-        position: relative;
-        z-index: 1;
-    }
-
-    .featured-bottom {
-        margin-top: 26px;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        position: relative;
-        z-index: 1;
-    }
-
-    .featured-meta-label {
-        font-size: 12px;
-        color: #dbeafe;
-        margin-bottom: 6px;
-    }
-
-    .featured-meta-value {
-        font-size: 15px;
-        font-weight: 700;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--primary-light), #1e40af);
         color: #fff;
+        font-size: 18px;
+        flex-shrink: 0;
     }
 
-    .dashboard-panel {
-        background: white;
-        border-radius: 20px;
-        padding: 22px;
-        box-shadow: 0 8px 22px rgba(0,0,0,0.07);
-        border: 1px solid rgba(226, 232, 240, 0.75);
-    }
-
-    .panel-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 18px;
-    }
-
-    .panel-title {
-        font-size: 22px;
+    .db-feature-copy h4 {
+        margin: 0 0 6px;
+        font-size: 1rem;
         font-weight: 800;
-        color: #163d7a;
+        color: var(--text-main);
+    }
+
+    .db-feature-copy p {
         margin: 0;
+        color: var(--text-soft);
+        font-size: 0.94rem;
+        line-height: 1.6;
     }
 
-    .panel-note {
-        font-size: 13px;
-        color: #64748b;
-        margin-top: 4px;
+    .db-table-wrap {
+        overflow-x: auto;
     }
 
-    .panel-link {
-        text-decoration: none;
-        font-size: 13px;
-        font-weight: 700;
-        color: #2563eb;
-        white-space: nowrap;
+    .db-table {
+        width: 100%;
+        border-collapse: collapse;
     }
 
-    .quick-actions-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 14px;
+    .db-table th,
+    .db-table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+        text-align: left;
+        font-size: 14px;
     }
 
-    .quick-action-card {
-        text-decoration: none;
-        background: linear-gradient(135deg, #f8fbff, #eef5ff);
-        border: 1px solid #dbeafe;
-        border-radius: 16px;
-        padding: 18px;
-        color: #163d7a;
-        transition: 0.2s ease;
-        min-height: 115px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+    body.dark-mode .db-table th,
+    body.dark-mode .db-table td {
+        border-bottom-color: rgba(51,65,85,0.95);
     }
 
-    body.dark-mode .quick-action-card {
-        background: linear-gradient(135deg, #0f172a, #111827);
-        border-color: #334155;
-        color: #bfdbfe;
-    }
-
-    .quick-action-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
-    }
-
-    .quick-icon {
-        font-size: 24px;
-    }
-
-    .quick-title {
-        font-size: 15px;
+    .db-table th {
+        color: var(--text-muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
         font-weight: 800;
     }
 
-    .quick-text {
-        font-size: 13px;
-        color: #64748b;
-        line-height: 1.45;
+    .db-table td {
+        color: var(--text-main);
     }
 
-    body.dark-mode .quick-text {
-        color: #cbd5e1;
+    .db-amount {
+        font-weight: 800;
     }
 
-    .accounts-mini-grid {
-        display: grid;
-        gap: 14px;
-    }
-
-    .account-mini-card {
-        background: #f8fbff;
-        border: 1px solid #dbeafe;
-        border-radius: 16px;
-        padding: 16px 18px;
-        display: flex;
-        justify-content: space-between;
+    .db-badge {
+        display: inline-flex;
         align-items: center;
-        gap: 16px;
-    }
-
-    .account-mini-title {
-        font-size: 15px;
-        font-weight: 800;
-        color: #163d7a;
-        margin-bottom: 6px;
-    }
-
-    .account-mini-meta {
-        font-size: 13px;
-        color: #64748b;
-        line-height: 1.45;
-    }
-
-    .account-mini-balance {
-        font-size: 22px;
-        font-weight: 800;
-        color: #163d7a;
-        white-space: nowrap;
-    }
-
-    .activity-list {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-    }
-
-    .activity-item {
-        background: #f8fbff;
-        border: 1px solid #dbeafe;
-        border-radius: 16px;
-        padding: 16px 18px;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-    }
-
-    .activity-left {
-        flex: 1;
-    }
-
-    .activity-title {
-        font-size: 15px;
-        font-weight: 800;
-        color: #163d7a;
-        margin-bottom: 6px;
-    }
-
-    .activity-subtext {
-        font-size: 13px;
-        color: #64748b;
-        line-height: 1.45;
-    }
-
-    .activity-amount {
-        font-size: 16px;
-        font-weight: 800;
-        white-space: nowrap;
-    }
-
-    .amount-in {
-        color: #166534;
-    }
-
-    .amount-out {
-        color: #b91c1c;
-    }
-
-    .badge {
+        justify-content: center;
         padding: 6px 10px;
         border-radius: 999px;
         font-size: 12px;
-        font-weight: 700;
-        display: inline-block;
-        white-space: nowrap;
+        font-weight: 800;
+        text-transform: uppercase;
     }
 
-    .badge-completed {
+    .db-badge-completed {
         background: #dcfce7;
         color: #166534;
     }
 
-    .badge-pending {
+    .db-badge-pending {
         background: #fef3c7;
         color: #92400e;
     }
 
-    .badge-failed {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .badge-internal {
-        background: #dbeafe;
-        color: #1d4ed8;
-    }
-
-    .badge-local {
-        background: #ede9fe;
-        color: #6d28d9;
-    }
-
-    .badge-bill {
-        background: #fce7f3;
-        color: #be185d;
-    }
-
-    .badge-deposit {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .insight-list {
+    .db-compact-grid {
         display: grid;
         gap: 14px;
     }
 
-    .insight-card {
-        background: #f8fbff;
-        border: 1px solid #dbeafe;
-        border-radius: 16px;
-        padding: 16px 18px;
+    .db-mini-card {
+        padding: 18px;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.72);
+        border: 1px solid rgba(219, 234, 254, 0.95);
+        box-shadow: 0 8px 20px rgba(15, 43, 91, 0.05);
     }
 
-    .insight-title {
-        font-size: 15px;
-        font-weight: 800;
-        color: #163d7a;
+    body.dark-mode .db-mini-card {
+        background: rgba(17,24,39,0.84);
+        border-color: rgba(51,65,85,0.95);
+    }
+
+    .db-mini-card span {
+        display: block;
+        color: var(--text-soft);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
         margin-bottom: 8px;
     }
 
-    .insight-text {
-        font-size: 13px;
-        color: #64748b;
-        line-height: 1.55;
+    .db-mini-card strong {
+        display: block;
+        color: var(--text-main);
+        font-size: 1.3rem;
+        font-weight: 800;
     }
 
-    .empty-state {
-        color: #64748b;
-        font-size: 14px;
+    .db-empty {
+        color: var(--text-soft);
+        font-size: 0.95rem;
     }
 
     @media (max-width: 1100px) {
-        .dashboard-grid {
+        .db-hero,
+        .db-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .db-account-grid {
             grid-template-columns: 1fr;
         }
 
-        .featured-bottom {
-            grid-template-columns: 1fr;
+        .db-hero h2 {
+            font-size: 1.8rem;
+        }
+
+        .db-hero-actions {
+            flex-direction: column;
+            align-items: stretch;
         }
     }
 </style>
 @endpush
 
 @section('content')
-    @php
-        $accounts = $customer['accounts'] ?? [];
-        $primaryAccount = $accounts[0] ?? null;
-        $recentTransactions = array_slice($transactions ?? [], 0, 5);
+@php
+    $accounts = $accounts ?? [];
+    $transactions = $transactions ?? [];
 
-        $totalBalance = 0;
-        $totalIncoming = 0;
-        $totalOutgoing = 0;
-        $billPaymentCount = 0;
-        $transferCount = 0;
+    $totalBalance = collect($accounts)->sum(function ($account) {
+        return (float) ($account['balance'] ?? 0);
+    });
 
-        foreach ($accounts as $account) {
-            $totalBalance += (float)($account['balance'] ?? 0);
-        }
+    $recentTransactions = collect($transactions)->take(6);
 
-        foreach (($transactions ?? []) as $transaction) {
-            $transactionType = strtolower($transaction['transactionType'] ?? '');
-            $transferType = strtolower($transaction['transferType'] ?? '');
-            $amount = (float)($transaction['amount'] ?? 0);
+    $customerName = session('customer.firstName', session('user.username', 'Customer'));
+    $customerEmail = session('customer.email', session('user.email', 'Not available'));
+@endphp
 
-            if ($transactionType === 'deposit' || $transferType === 'deposit') {
-                $totalIncoming += $amount;
-            } else {
-                $totalOutgoing += $amount;
-            }
-
-            if ($transferType === 'billpayment') {
-                $billPaymentCount++;
-            }
-
-            if (in_array($transferType, ['internal', 'localbank'])) {
-                $transferCount++;
-            }
-        }
-
-        $netFlow = $totalIncoming - $totalOutgoing;
-    @endphp
-
-    @if($customer)
-        <div class="summary-grid">
-            <div class="summary-card">
-                <h3>Total Available Balance</h3>
-                <div class="summary-value">${{ number_format($totalBalance, 2) }}</div>
-                <div class="summary-subtext">Across all linked accounts</div>
+<div class="db-grid">
+    <div class="db-stack">
+        <section class="db-card" id="accounts">
+            <div class="db-card-head">
+                <h3>Accounts Overview</h3>
+                <a href="{{ route('transactions') }}">View Transactions</a>
             </div>
 
-            <div class="summary-card">
-                <h3>Money In</h3>
-                <div class="summary-value">${{ number_format($totalIncoming, 2) }}</div>
-                <div class="summary-subtext">Deposits and incoming transfers</div>
-            </div>
-
-            <div class="summary-card">
-                <h3>Money Out</h3>
-                <div class="summary-value">${{ number_format($totalOutgoing, 2) }}</div>
-                <div class="summary-subtext">Transfers and bill payments</div>
-            </div>
-
-            <div class="summary-card">
-                <h3>Net Activity</h3>
-                <div class="summary-value">{{ $netFlow >= 0 ? '+' : '-' }}${{ number_format(abs($netFlow), 2) }}</div>
-                <div class="summary-subtext">Incoming minus outgoing</div>
-            </div>
-
-            <div class="summary-card">
-                <h3>Total Transfers</h3>
-                <div class="summary-value">{{ $transferCount }}</div>
-                <div class="summary-subtext">Internal and local bank transfers</div>
-            </div>
-
-            <div class="summary-card">
-                <h3>Bill Payments</h3>
-                <div class="summary-value">{{ $billPaymentCount }}</div>
-                <div class="summary-subtext">Completed bill payment activity</div>
-            </div>
-        </div>
-
-        <div class="dashboard-grid">
-            <div class="left-stack">
-                @if($primaryAccount)
-                    <div class="featured-card">
-                        <div class="featured-top">
-                            <div class="bank-chip">
-                                <span class="live-dot"></span>
-                                <span>Secure Banking Session</span>
+            @if(count($accounts))
+                <div class="db-account-grid">
+                    @foreach($accounts as $account)
+                        <div class="db-account-card">
+                            <div class="db-account-type">
+                                {{ $account['accountType'] ?? 'Account' }}
                             </div>
-                            <div class="bank-chip">Bank of Fiji</div>
-                        </div>
-
-                        <div class="featured-label">Primary Account Balance</div>
-                        <div class="featured-balance">${{ number_format((float)($primaryAccount['balance'] ?? 0), 2) }}</div>
-
-                        <div class="featured-number">
-                            **** **** **** {{ substr((string)($primaryAccount['accountNumber'] ?? '0000'), -4) }}
-                        </div>
-
-                        <div class="featured-bottom">
-                            <div>
-                                <div class="featured-meta-label">Account Holder</div>
-                                <div class="featured-meta-value">
-                                    {{ strtoupper(($customer['firstName'] ?? '') . ' ' . ($customer['lastName'] ?? '')) }}
-                                </div>
+                            <div class="db-account-balance">
+                                {{ number_format((float) ($account['balance'] ?? 0), 2) }} FJD
                             </div>
-
-                            <div>
-                                <div class="featured-meta-label">Account Type</div>
-                                <div class="featured-meta-value">{{ $primaryAccount['accountType'] ?? 'Primary Account' }}</div>
-                            </div>
-
-                            <div>
-                                <div class="featured-meta-label">Interest Rate</div>
-                                <div class="featured-meta-value">{{ $primaryAccount['interestRate'] ?? '0' }}%</div>
+                            <div class="db-account-meta">
+                                Account No: {{ $account['accountNumber'] ?? 'N/A' }}<br>
+                                Currency: {{ $account['currency'] ?? 'FJD' }}
                             </div>
                         </div>
-                    </div>
-                @endif
-
-                <div class="dashboard-panel">
-                    <div class="panel-header">
-                        <div>
-                            <h3 class="panel-title">Quick Actions</h3>
-                            <div class="panel-note">Common banking actions available from your dashboard.</div>
-                        </div>
-                    </div>
-
-                    <div class="quick-actions-grid">
-                        <a class="quick-action-card" href="{{ route('transfer') }}">
-                            <div class="quick-icon">🔁</div>
-                            <div class="quick-title">Transfer Money</div>
-                            <div class="quick-text">Send funds to another BoF account or local bank.</div>
-                        </a>
-
-                        <a class="quick-action-card" href="{{ route('bill-payment') }}">
-                            <div class="quick-icon">💡</div>
-                            <div class="quick-title">Pay Bills</div>
-                            <div class="quick-text">Settle utility, telecom, and other bill payments.</div>
-                        </a>
-
-                        <a class="quick-action-card" href="{{ route('transactions') }}">
-                            <div class="quick-icon">📄</div>
-                            <div class="quick-title">View Transactions</div>
-                            <div class="quick-text">Review detailed account activity and export records.</div>
-                        </a>
-
-                        <a class="quick-action-card" href="#accounts">
-                            <div class="quick-icon">💳</div>
-                            <div class="quick-title">View Accounts</div>
-                            <div class="quick-text">Check balances, interest rates, and linked accounts.</div>
-                        </a>
-                    </div>
+                    @endforeach
                 </div>
+            @else
+                <div class="db-empty">No accounts found for this customer.</div>
+            @endif
+        </section>
 
-                <div class="dashboard-panel" id="accounts">
-                    <div class="panel-header">
-                        <div>
-                            <h3 class="panel-title">Your Accounts</h3>
-                            <div class="panel-note">A quick snapshot of your linked banking accounts.</div>
-                        </div>
-                    </div>
-
-                    @if(count($accounts) > 0)
-                        <div class="accounts-mini-grid">
-                            @foreach($accounts as $account)
-                                <div class="account-mini-card">
-                                    <div>
-                                        <div class="account-mini-title">{{ $account['accountType'] ?? 'Account' }}</div>
-                                        <div class="account-mini-meta">
-                                            Account Number: {{ $account['accountNumber'] ?? '-' }}<br>
-                                            Interest Rate: {{ $account['interestRate'] ?? '0' }}%
-                                        </div>
-                                    </div>
-
-                                    <div class="account-mini-balance">
-                                        ${{ number_format((float)($account['balance'] ?? 0), 2) }}
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <p class="empty-state">No linked accounts found.</p>
-                    @endif
-                </div>
+        <section class="db-card">
+            <div class="db-card-head">
+                <h3>Recent Transactions</h3>
+                <a href="{{ route('transactions') }}">Open Full History</a>
             </div>
 
-            <div class="right-stack">
-                <div class="dashboard-panel" id="transactions">
-                    <div class="panel-header">
-                        <div>
-                            <h3 class="panel-title">Recent Activity</h3>
-                            <div class="panel-note">Showing your latest 5 banking transactions.</div>
-                        </div>
-                        <a class="panel-link" href="{{ route('transactions') }}">View all</a>
-                    </div>
-
-                    @if(count($recentTransactions) > 0)
-                        <div class="activity-list">
+            @if($recentTransactions->count())
+                <div class="db-table-wrap">
+                    <table class="db-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Reference</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             @foreach($recentTransactions as $transaction)
                                 @php
-                                    $transactionType = strtolower($transaction['transactionType'] ?? '');
-                                    $transferType = strtolower($transaction['transferType'] ?? '');
                                     $status = strtolower($transaction['transactionStatus'] ?? 'completed');
-                                    $amount = (float)($transaction['amount'] ?? 0);
-
-                                    $isIncoming = $transactionType === 'deposit' || $transferType === 'deposit';
-                                    $amountClass = $isIncoming ? 'amount-in' : 'amount-out';
-
-                                    $modeLabel = $transaction['transferType'] ?? $transaction['transactionType'] ?? 'Transaction';
+                                    $badgeClass = $status === 'pending'
+                                        ? 'db-badge-pending'
+                                        : 'db-badge-completed';
                                 @endphp
-
-                                <div class="activity-item">
-                                    <div class="activity-left">
-                                        <div class="activity-title">{{ $transaction['description'] ?? 'Transaction' }}</div>
-                                        <div class="activity-subtext">
-                                            Ref: {{ $transaction['referenceNumber'] ?? '-' }}<br>
-                                            {{ $transaction['destinationInstitution'] ?? 'BoF' }} ·
-                                            {{ !empty($transaction['transactionDate']) ? \Carbon\Carbon::parse($transaction['transactionDate'])->format('d M Y, h:i A') : '-' }}
-                                        </div>
-
-                                        <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-                                            @if($transferType === 'internal')
-                                                <span class="badge badge-internal">Internal</span>
-                                            @elseif($transferType === 'localbank')
-                                                <span class="badge badge-local">Local Bank</span>
-                                            @elseif($transferType === 'billpayment')
-                                                <span class="badge badge-bill">Bill Payment</span>
-                                            @elseif($transferType === 'deposit')
-                                                <span class="badge badge-deposit">Deposit</span>
-                                            @else
-                                                <span class="badge badge-internal">{{ $modeLabel }}</span>
-                                            @endif
-
-                                            @if($status === 'completed')
-                                                <span class="badge badge-completed">Completed</span>
-                                            @elseif($status === 'pending')
-                                                <span class="badge badge-pending">Pending</span>
-                                            @elseif($status === 'failed')
-                                                <span class="badge badge-failed">Failed</span>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    <div class="activity-amount {{ $amountClass }}">
-                                        {{ $isIncoming ? '+' : '-' }}${{ number_format($amount, 2) }}
-                                    </div>
-                                </div>
+                                <tr>
+                                    <td>
+                                        {{ !empty($transaction['transactionDate']) ? \Carbon\Carbon::parse($transaction['transactionDate'])->format('d/m/Y') : '-' }}
+                                    </td>
+                                    <td>{{ $transaction['referenceNumber'] ?? '-' }}</td>
+                                    <td>{{ ucfirst($transaction['transferType'] ?? $transaction['transactionType'] ?? 'Transaction') }}</td>
+                                    <td class="db-amount">
+                                        {{ number_format((float) ($transaction['amount'] ?? 0), 2) }} FJD
+                                    </td>
+                                    <td>
+                                        <span class="db-badge {{ $badgeClass }}">
+                                            {{ strtoupper($status === 'completed' ? 'processed' : $status) }}
+                                        </span>
+                                    </td>
+                                </tr>
                             @endforeach
-                        </div>
-                    @else
-                        <p class="empty-state">No recent transactions found.</p>
-                    @endif
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="db-empty">No recent transactions available.</div>
+            @endif
+        </section>
+    </div>
+
+    <div class="db-stack">
+        <section class="db-card" id="profile">
+            <div class="db-card-head">
+                <h3>Customer Profile</h3>
+            </div>
+
+            <div class="db-compact-grid">
+                <div class="db-mini-card">
+                    <span>Customer Name</span>
+                    <strong>{{ $customerName }}</strong>
                 </div>
 
-                <div class="dashboard-panel" id="profile">
-                    <div class="panel-header">
-                        <div>
-                            <h3 class="panel-title">Customer Profile</h3>
-                            <div class="panel-note">Basic profile information linked to your banking account.</div>
-                        </div>
-                    </div>
-
-                    <div class="insight-list">
-                        <div class="insight-card">
-                            <div class="insight-title">Full Name</div>
-                            <div class="insight-text">{{ $customer['firstName'] ?? '' }} {{ $customer['lastName'] ?? '' }}</div>
-                        </div>
-
-                        <div class="insight-card">
-                            <div class="insight-title">Email Address</div>
-                            <div class="insight-text">{{ $customer['email'] ?? '-' }}</div>
-                        </div>
-
-                        <div class="insight-card">
-                            <div class="insight-title">Phone Number</div>
-                            <div class="insight-text">{{ $customer['phone'] ?? '-' }}</div>
-                        </div>
-
-                        <div class="insight-card">
-                            <div class="insight-title">TIN / Reference</div>
-                            <div class="insight-text">{{ $customer['tin'] ?? '-' }}</div>
-                        </div>
-
-                        <div class="insight-card">
-                            <div class="insight-title">Residency Status</div>
-                            <div class="insight-text">{{ $customer['residencyStatus'] ?? '-' }}</div>
-                        </div>
-                    </div>
+                <div class="db-mini-card">
+                    <span>Email</span>
+                    <strong style="font-size: 1rem;">{{ $customerEmail }}</strong>
                 </div>
 
-                <div class="dashboard-panel">
-                    <div class="panel-header">
-                        <div>
-                            <h3 class="panel-title">Account Insights</h3>
-                            <div class="panel-note">Helpful banking information based on your current activity.</div>
-                        </div>
-                    </div>
-
-                    <div class="insight-list">
-                        <div class="insight-card">
-                            <div class="insight-title">Spending Overview</div>
-                            <div class="insight-text">
-                                Your total outgoing activity currently stands at <strong>${{ number_format($totalOutgoing, 2) }}</strong>,
-                                while total incoming funds stand at <strong>${{ number_format($totalIncoming, 2) }}</strong>.
-                            </div>
-                        </div>
-
-                        <div class="insight-card">
-                            <div class="insight-title">Most Useful Next Action</div>
-                            <div class="insight-text">
-                                Use <strong>Transfer Money</strong> for account-to-account movement, or <strong>Pay Bills</strong>
-                                to settle registered billers directly from your account.
-                            </div>
-                        </div>
-
-                        <div class="insight-card">
-                            <div class="insight-title">Demo Banking Reminder</div>
-                            <div class="insight-text">
-                                This portal currently reflects demo-mode banking activity. Transfers and bill payments are processed instantly for testing and presentation purposes.
-                            </div>
-                        </div>
-                    </div>
+                <div class="db-mini-card">
+                    <span>Total Portfolio Balance</span>
+                    <strong>{{ number_format($totalBalance, 2) }} FJD</strong>
                 </div>
             </div>
-        </div>
-    @else
-        <div class="dashboard-panel">
-            <p class="empty-state">No linked customer profile found for this login.</p>
-        </div>
-    @endif
+        </section>
+
+        <section class="db-card">
+            <div class="db-card-head">
+                <h3>Quick Banking Tools</h3>
+            </div>
+
+            <div class="db-feature-list">
+                <a href="{{ route('transfer') }}" class="db-feature-item" style="text-decoration:none;">
+                    <div class="db-feature-icon">⇄</div>
+                    <div class="db-feature-copy">
+                        <h4>Transfer Money</h4>
+                        <p>Move funds between accounts or to saved beneficiaries quickly and securely.</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('bill-payment') }}" class="db-feature-item" style="text-decoration:none;">
+                    <div class="db-feature-icon">💡</div>
+                    <div class="db-feature-copy">
+                        <h4>Bill Payments</h4>
+                        <p>Pay utility providers and recurring service bills from your banking workspace.</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('beneficiaries') }}" class="db-feature-item" style="text-decoration:none;">
+                    <div class="db-feature-icon">👥</div>
+                    <div class="db-feature-copy">
+                        <h4>Manage Beneficiaries</h4>
+                        <p>Review your saved payees and keep frequently used beneficiary records updated.</p>
+                    </div>
+                </a>
+
+                <a href="{{ route('scheduled-payments') }}" class="db-feature-item" style="text-decoration:none;">
+                    <div class="db-feature-icon">🗓</div>
+                    <div class="db-feature-copy">
+                        <h4>Scheduled Payments</h4>
+                        <p>Track future-dated transfers and recurring payments in one organized place.</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+    </div>
+</div>
 @endsection
