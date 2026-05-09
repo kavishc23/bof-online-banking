@@ -20,6 +20,7 @@ use App\Http\Controllers\ScheduledPaymentController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\TaxReportController;
 use App\Http\Controllers\TransferController;
+use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [AuthController::class, 'redirectToLogin']);
@@ -77,6 +78,9 @@ Route::middleware(['banking.session', 'throttle:60,1'])->group(function (): void
 
     Route::get('/bill-payment', [BillPaymentController::class, 'index'])->name('bill-payment');
     Route::post('/bill-payment', [BillPaymentController::class, 'submit'])->name('bill-payment.submit');
+
+    Route::get('/withdraw', [WithdrawalController::class, 'create'])->name('withdraw');
+    Route::post('/withdraw', [WithdrawalController::class, 'store'])->name('withdraw.submit');
 
     Route::get('/loan-application', [LoanController::class, 'create'])->name('loan-application');
     Route::post('/loan-application', [LoanController::class, 'store'])->name('loan-application.submit');

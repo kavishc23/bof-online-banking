@@ -543,6 +543,15 @@
                 <option value="failed">Failed</option>
             </select>
 
+            <select id="txTypeFilter" class="tx-select">
+                <option value="">All Transaction Types</option>
+                <option value="deposit">Deposit</option>
+                <option value="withdrawal">Withdrawal</option>
+                <option value="transfer">Transfer</option>
+                <option value="billpayment">Bill Payment</option>
+                <option value="fee">Fee</option>
+            </select>
+
             <select id="txAccountFilter" class="tx-select">
                 <option value="">All Accounts In Current View</option>
                 @foreach(($accounts ?? []) as $account)
@@ -580,10 +589,11 @@
                     <tbody id="transactionTableBody">
                         @foreach($transactions as $index => $transaction)
                             @php
-                                $transactionType = strtolower($transaction['transactionType'] ?? '-');
-                                $transferType = strtolower($transaction['transferType'] ?? '-');
+                                $transactionType = strtolower($transaction['transactionType'] ?? '');
+                                $transferType = strtolower($transaction['transferType'] ?? '');
                                 $statusRaw = strtolower($transaction['transactionStatus'] ?? 'completed');
                                 $amount = (float) ($transaction['amount'] ?? 0);
+                                $normalizedType = $transferType ?: $transactionType;
 
                                 $reference = $transaction['referenceNumber'] ?? '-';
 
@@ -594,6 +604,7 @@
 
                                 $beneficiary = $transaction['beneficiaryName']
                                     ?? $transaction['billerName']
+                                    ?? ($transactionType === 'withdrawal' ? 'Cash Withdrawal' : null)
                                     ?? ($transactionType === 'deposit' ? 'Incoming Funds' : '-');
 
                                 $reason = $transaction['description'] ?? ($transaction['remarks'] ?? '-');
@@ -605,15 +616,18 @@
                                 $displayDate = $dateObject ? $dateObject->format('d/m/Y') : '-';
                                 $dateValue = $dateObject ? $dateObject->format('Y-m-d') : '';
 
-                                $typeLabel = match($transferType) {
+                                $typeLabel = match($normalizedType) {
                                     'billpayment' => 'Bill Payment',
+                                    'transfer' => 'Transfer',
                                     'localbank' => 'Local Bank Transfer',
                                     'deposit' => 'Deposit',
+                                    'withdrawal' => 'Withdrawal',
+                                    'fee' => 'Monthly Account Fee',
                                     'internal' => 'Internal Transfer',
-                                    default => ucfirst($transferType ?: $transactionType ?: 'Transaction'),
+                                    default => ucfirst($normalizedType ?: 'transaction'),
                                 };
 
-                                $isCredit = $transferType === 'deposit';
+                                $isCredit = $transactionType === 'deposit' || $transferType === 'deposit';
 
                                 $typeSub = 'Acct: ' . $accountNumber;
 
@@ -625,6 +639,7 @@
                                     ($reason ?? '') . ' ' .
                                     ($accountNumber ?? '') . ' ' .
                                     ($reference ?? '') . ' ' .
+                                    ($transactionType ?? '') . ' ' .
                                     ($transferType ?? '') . ' ' .
                                     ($reasonSub ?? '')
                                 ));
@@ -633,6 +648,7 @@
                             <tr
                                 class="{{ $index === 0 ? 'highlight' : '' }}"
                                 data-status="{{ $statusRaw }}"
+                                data-type="{{ $normalizedType }}"
                                 data-account="{{ strtolower($accountNumber) }}"
                                 data-date="{{ $dateValue }}"
                                 data-search="{{ $searchBlob }}"
@@ -641,16 +657,19 @@
                                     <div class="tx-type-wrap">
                                         <span class="tx-type-icon" title="{{ $typeLabel }}">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                                                @if($transferType === 'billpayment')
+                                                @if($normalizedType === 'billpayment')
                                                     <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"></path>
                                                     <path d="M9 8h6M9 12h6"></path>
-                                                @elseif($transferType === 'localbank')
+                                                @elseif(in_array($normalizedType, ['transfer', 'localbank', 'internal'], true))
                                                     <path d="M3 10l9-6 9 6"></path>
                                                     <path d="M5 10v8M9 10v8M15 10v8M19 10v8"></path>
                                                     <path d="M3 18h18"></path>
-                                                @elseif($transferType === 'deposit')
+                                                @elseif($normalizedType === 'deposit')
                                                     <path d="M12 4v16"></path>
                                                     <path d="M7 9l5-5 5 5"></path>
+                                                @elseif(in_array($normalizedType, ['withdrawal', 'fee'], true))
+                                                    <path d="M12 4v16"></path>
+                                                    <path d="M7 15l5 5 5-5"></path>
                                                 @else
                                                     <path d="M3 11l9-8 9 8"></path>
                                                     <path d="M5 10v10h14V10"></path>
@@ -727,6 +746,7 @@
     (function () {
         const txSearch = document.getElementById('txSearch');
         const txStatusFilter = document.getElementById('txStatusFilter');
+        const txTypeFilter = document.getElementById('txTypeFilter');
         const txAccountFilter = document.getElementById('txAccountFilter');
         const txDateFilter = document.getElementById('txDateFilter');
         const txClearFilters = document.getElementById('txClearFilters');
@@ -751,6 +771,7 @@
         function applyTransactionFilters() {
             const searchValue = (txSearch?.value || '').toLowerCase().trim();
             const statusValue = (txStatusFilter?.value || '').toLowerCase().trim();
+            const typeValue = (txTypeFilter?.value || '').toLowerCase().trim();
             const accountValue = (txAccountFilter?.value || '').toLowerCase().trim();
             const dateValue = (txDateFilter?.value || '').trim();
 
@@ -759,15 +780,17 @@
             txRows.forEach((row) => {
                 const rowSearch = (row.dataset.search || '').toLowerCase();
                 const rowStatus = (row.dataset.status || '').toLowerCase();
+                const rowType = (row.dataset.type || '').toLowerCase();
                 const rowAccount = (row.dataset.account || '').toLowerCase();
                 const rowDate = row.dataset.date || '';
 
                 const matchesSearch = !searchValue || rowSearch.includes(searchValue);
                 const matchesStatus = statusMatches(rowStatus, statusValue);
+                const matchesType = !typeValue || rowType === typeValue || (typeValue === 'transfer' && ['transfer', 'localbank', 'internal'].includes(rowType));
                 const matchesAccount = !accountValue || rowAccount === accountValue;
                 const matchesDate = !dateValue || rowDate === dateValue;
 
-                const shouldShow = matchesSearch && matchesStatus && matchesAccount && matchesDate;
+                const shouldShow = matchesSearch && matchesStatus && matchesType && matchesAccount && matchesDate;
 
                 row.classList.toggle('tx-hidden', !shouldShow);
 
@@ -785,6 +808,7 @@
 
         if (txSearch) txSearch.addEventListener('input', applyTransactionFilters);
         if (txStatusFilter) txStatusFilter.addEventListener('change', applyTransactionFilters);
+        if (txTypeFilter) txTypeFilter.addEventListener('change', applyTransactionFilters);
         if (txAccountFilter) txAccountFilter.addEventListener('change', applyTransactionFilters);
         if (txDateFilter) txDateFilter.addEventListener('change', applyTransactionFilters);
 
@@ -792,6 +816,7 @@
             txClearFilters.addEventListener('click', function () {
                 if (txSearch) txSearch.value = '';
                 if (txStatusFilter) txStatusFilter.value = '';
+                if (txTypeFilter) txTypeFilter.value = '';
                 if (txAccountFilter) txAccountFilter.value = '';
                 if (txDateFilter) txDateFilter.value = '';
                 applyTransactionFilters();

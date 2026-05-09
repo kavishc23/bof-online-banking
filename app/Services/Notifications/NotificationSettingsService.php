@@ -3,6 +3,7 @@
 namespace App\Services\Notifications;
 
 use App\Services\Audit\AdminAuditLogger;
+use App\Services\Logging\BankingLogger;
 use App\Services\Strapi\StrapiApiService;
 
 class NotificationSettingsService
@@ -18,6 +19,7 @@ class NotificationSettingsService
     public function __construct(
         private readonly StrapiApiService $strapi,
         private readonly AdminAuditLogger $audit,
+        private readonly BankingLogger $logger,
     ) {}
 
     /**
@@ -28,6 +30,33 @@ class NotificationSettingsService
         return $this->strapi->data($this->strapi->get('/api/notification-settings', [
             'sort' => 'eventLabel:asc',
         ]));
+    }
+
+    public function isEnabled(string $eventKey): bool
+    {
+        if (! in_array($eventKey, self::ALLOWED_EVENT_KEYS, true)) {
+            $this->logger->activity('notification.setting_denied', 'Notification message suppressed because event key is not allowed.', [
+                'event_key' => $eventKey,
+            ]);
+
+            return false;
+        }
+
+        $setting = $this->strapi->data($this->strapi->get('/api/notification-settings', [
+            'filters[eventKey][$eq]' => $eventKey,
+        ]))[0] ?? null;
+
+        $enabled = (bool) ($setting['enabled'] ?? false);
+
+        $this->logger->activity(
+            $enabled ? 'notification.message_allowed' : 'notification.message_suppressed',
+            $enabled
+                ? 'Notification confirmation message allowed by admin settings.'
+                : 'Notification confirmation message suppressed by admin settings.',
+            ['event_key' => $eventKey]
+        );
+
+        return $enabled;
     }
 
     /**

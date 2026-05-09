@@ -14,7 +14,7 @@
                 <label for="transactionType">Type</label>
                 <select id="transactionType" name="transactionType">
                     <option value="">All types</option>
-                    @foreach(['Deposit', 'Withdrawal', 'Transfer', 'BillPayment'] as $type)
+                    @foreach(['Deposit', 'Withdrawal', 'Transfer', 'BillPayment', 'Fee'] as $type)
                         <option value="{{ $type }}" @selected(($filters['transactionType'] ?? '') === $type)>{{ $type }}</option>
                     @endforeach
                 </select>

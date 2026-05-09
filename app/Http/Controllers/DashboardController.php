@@ -62,6 +62,23 @@ class DashboardController extends Controller
     {
         $customer = session('customer');
         $transactions = session('transactions', []);
+        $freshData = $this->bofService->fetchCustomerAndTransactions((string) session('jwt'), session('user', []));
+
+        if (! empty($freshData['customer'])) {
+            $customer = $freshData['customer'];
+            $transactions = collect($transactions)
+                ->merge($freshData['transactions'])
+                ->keyBy(fn (array $transaction): string => (string) ($transaction['referenceNumber'] ?? uniqid('tx-', true)))
+                ->sortByDesc(fn (array $transaction): string => (string) ($transaction['transactionDate'] ?? ''))
+                ->values()
+                ->all();
+
+            session([
+                'customer' => $customer,
+                'transactions' => $transactions,
+            ]);
+        }
+
         $accounts = $customer['accounts'] ?? [];
         $selectedAccountId = request('account_id');
 

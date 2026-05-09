@@ -896,6 +896,7 @@
                         <a href="{{ route('admin.support-tickets.index') }}" class="top-shortcut">Tickets</a>
                     @else
                         <a href="{{ route('transfer') }}" class="top-shortcut">Transfer</a>
+                        <a href="{{ route('withdraw') }}" class="top-shortcut">Withdraw</a>
                         <a href="{{ route('bill-payment') }}" class="top-shortcut">Pay Bill</a>
                     @endif
                 </div>
@@ -980,6 +981,11 @@
                         <a href="{{ route('bill-payment') }}" class="{{ request()->routeIs('bill-payment') ? 'active' : '' }}">
                             <span class="menu-icon">💡</span>
                             <span class="menu-text">Bill Payment</span>
+                        </a>
+
+                        <a href="{{ route('withdraw') }}" class="{{ request()->routeIs('withdraw') ? 'active' : '' }}">
+                            <span class="menu-icon">💵</span>
+                            <span class="menu-text">Withdraw</span>
                         </a>
 
                         <a href="{{ route('beneficiaries') }}" class="{{ request()->routeIs('beneficiaries') ? 'active' : '' }}">

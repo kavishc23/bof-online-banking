@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\BankingActivityOccurred;
 use App\Services\Logging\BankingLogger;
+use App\Services\Notifications\NotificationSettingsService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Client\Response;
@@ -18,6 +19,7 @@ class BofService
     public function __construct(
         private readonly BankingLogger $logger,
         private readonly AuditService $audit,
+        private readonly NotificationSettingsService $notificationSettings,
     ) {}
 
     public function reportApiFailure(string $step, Response $response): void
@@ -58,8 +60,6 @@ class BofService
             $transactions = [];
 
             if ($matchedCustomer && ! empty($matchedCustomer['accounts'])) {
-                $accountIds = array_map(fn ($account) => $account['id'], $matchedCustomer['accounts']);
-
                 $transactionResponse = Http::withToken($jwt)->get(
                     'http://localhost:1337/api/transactions?populate=*'
                 );
@@ -67,9 +67,9 @@ class BofService
                 $transactionRows = $transactionResponse->json()['data'] ?? [];
 
                 foreach ($transactionRows as $transaction) {
-                    foreach ($accountIds as $accountId) {
-                        if ($this->transactionBelongsToAccount($transaction, (int) $accountId)) {
-                            $transactions[] = $transaction;
+                    foreach ($matchedCustomer['accounts'] as $account) {
+                        if ($this->transactionBelongsToCustomerAccount($transaction, $account)) {
+                            $transactions[] = $this->normalizeTransactionForAccount($transaction, $account);
                             break;
                         }
                     }
@@ -97,10 +97,15 @@ class BofService
 
     public function transactionBelongsToAccount(array $transaction, int $accountId): bool
     {
-        $sourceAccountId = $transaction['sourceAccount']['id'] ?? null;
-        $legacyAccountId = $transaction['account']['id'] ?? null;
-        $destinationAccountId = $transaction['destinationAccount']['id'] ?? null;
+        return $this->transactionBelongsToCustomerAccount($transaction, ['id' => $accountId]);
+    }
 
+    /**
+     * @param  array<string, mixed>  $transaction
+     * @param  array<string, mixed>  $account
+     */
+    public function transactionBelongsToCustomerAccount(array $transaction, array $account): bool
+    {
         $transactionType = strtolower($transaction['transactionType'] ?? '');
         $transferType = strtolower($transaction['transferType'] ?? '');
 
@@ -108,13 +113,92 @@ class BofService
 
         if ($isDeposit) {
             return
-                (int) $legacyAccountId === $accountId ||
-                (int) $destinationAccountId === $accountId;
+                $this->relationMatchesAccount($transaction['account'] ?? null, $account) ||
+                $this->relationMatchesAccount($transaction['destinationAccount'] ?? null, $account);
         }
 
         return
-            (int) $legacyAccountId === $accountId ||
-            (int) $sourceAccountId === $accountId;
+            $this->relationMatchesAccount($transaction['account'] ?? null, $account) ||
+            $this->relationMatchesAccount($transaction['sourceAccount'] ?? null, $account);
+    }
+
+    /**
+     * @param  array<string, mixed>  $account
+     */
+    private function relationMatchesAccount(mixed $relation, array $account): bool
+    {
+        if (is_numeric($relation)) {
+            return (int) $relation === (int) ($account['id'] ?? 0);
+        }
+
+        if (! is_array($relation)) {
+            return false;
+        }
+
+        $relationData = $relation['data'] ?? $relation;
+        $relationAttributes = is_array($relationData) ? ($relationData['attributes'] ?? []) : [];
+        $relationAccount = is_array($relationData) ? array_merge($relationData, is_array($relationAttributes) ? $relationAttributes : []) : [];
+
+        return ((int) ($relationAccount['id'] ?? 0) > 0 && (int) ($relationAccount['id'] ?? 0) === (int) ($account['id'] ?? 0))
+            || (! empty($relationAccount['documentId']) && (string) $relationAccount['documentId'] === (string) ($account['documentId'] ?? ''))
+            || (! empty($relationAccount['accountNumber']) && (string) $relationAccount['accountNumber'] === (string) ($account['accountNumber'] ?? ''));
+    }
+
+    /**
+     * @param  array<string, mixed>  $transaction
+     * @param  array<string, mixed>  $account
+     * @return array<string, mixed>
+     */
+    private function normalizeTransactionForAccount(array $transaction, array $account): array
+    {
+        $transactionType = strtolower((string) ($transaction['transactionType'] ?? ''));
+
+        if (empty($transaction['transferType'])) {
+            $transaction['transferType'] = match ($transactionType) {
+                'deposit' => 'Deposit',
+                'withdrawal' => 'Withdrawal',
+                'billpayment' => 'BillPayment',
+                'fee' => 'Fee',
+                'transfer' => 'Transfer',
+                default => $transaction['transactionType'] ?? 'Transaction',
+            };
+        }
+
+        if ($this->relationMatchesAccount($transaction['account'] ?? null, $account)) {
+            $transaction['account'] = $this->normalizedAccountRelation($transaction['account'] ?? null, $account);
+        }
+
+        if ($this->relationMatchesAccount($transaction['sourceAccount'] ?? null, $account)) {
+            $transaction['sourceAccount'] = $this->normalizedAccountRelation($transaction['sourceAccount'] ?? null, $account);
+        }
+
+        if ($this->relationMatchesAccount($transaction['destinationAccount'] ?? null, $account)) {
+            $transaction['destinationAccount'] = $this->normalizedAccountRelation($transaction['destinationAccount'] ?? null, $account);
+        }
+
+        if ($transactionType === 'withdrawal') {
+            $transaction['account'] = is_array($transaction['account'] ?? null) ? $transaction['account'] : $account;
+            $transaction['sourceAccount'] = is_array($transaction['sourceAccount'] ?? null) ? $transaction['sourceAccount'] : $account;
+        }
+
+        return $transaction;
+    }
+
+    /**
+     * @param  array<string, mixed>  $fallbackAccount
+     * @return array<string, mixed>
+     */
+    private function normalizedAccountRelation(mixed $relation, array $fallbackAccount): array
+    {
+        if (! is_array($relation)) {
+            return $fallbackAccount;
+        }
+
+        $relationData = $relation['data'] ?? $relation;
+        $relationAttributes = is_array($relationData) ? ($relationData['attributes'] ?? []) : [];
+        $normalized = is_array($relationData) ? array_merge($relationData, is_array($relationAttributes) ? $relationAttributes : []) : [];
+
+        return array_filter($normalized) ?: $fallbackAccount;
     }
 
     public function fetchArray(string $url, ?string $jwt = null): array
@@ -448,9 +532,8 @@ class BofService
 
         $this->refreshCustomerSession($jwt, $user);
 
-        return redirect('/dashboard')->with(
-            'success',
-            'Transaction successful. SMS confirmation sent to sender and funds received notification sent to destination account holder. Reference: '.$referenceOut
+        return $this->redirectWithOptionalSuccess(
+            $this->transferSuccessMessage($referenceOut, internalTransfer: true)
         );
     }
 
@@ -517,9 +600,8 @@ class BofService
 
         $this->refreshCustomerSession($jwt, $user);
 
-        return redirect('/dashboard')->with(
-            'success',
-            'Transaction successful. SMS confirmation sent. Reference: '.$referenceNumber
+        return $this->redirectWithOptionalSuccess(
+            $this->transferSuccessMessage($referenceNumber, internalTransfer: false)
         );
     }
 
@@ -627,9 +709,8 @@ class BofService
 
             $this->refreshCustomerSession($jwt, $user);
 
-            return redirect('/dashboard')->with(
-                'success',
-                'Bill payment successful. SMS confirmation sent. Reference: '.$referenceNumber
+            return $this->redirectWithOptionalSuccess(
+                $this->billPaymentSuccessMessage($referenceNumber)
             );
         } catch (Throwable $exception) {
             return $this->handleException($exception, 'Bill payment could not be completed. Please try again.');
@@ -655,5 +736,40 @@ class BofService
             'customer' => $result['customer'],
             'transactions' => $result['transactions'],
         ]);
+    }
+
+    private function transferSuccessMessage(string $referenceNumber, bool $internalTransfer): ?string
+    {
+        if (! $this->notificationSettings->isEnabled('money_sent')) {
+            return null;
+        }
+
+        $message = 'Transaction successful. SMS confirmation sent.';
+
+        if ($internalTransfer && $this->notificationSettings->isEnabled('money_received')) {
+            $message .= ' Funds received notification sent to destination account holder.';
+        }
+
+        return $message.' Reference: '.$referenceNumber;
+    }
+
+    private function billPaymentSuccessMessage(string $referenceNumber): ?string
+    {
+        if (! $this->notificationSettings->isEnabled('bill_payments')) {
+            return null;
+        }
+
+        return 'Bill payment successful. SMS confirmation sent. Reference: '.$referenceNumber;
+    }
+
+    private function redirectWithOptionalSuccess(?string $message): RedirectResponse
+    {
+        $redirect = redirect('/dashboard');
+
+        if ($message === null) {
+            return $redirect;
+        }
+
+        return $redirect->with('success', $message);
     }
 }

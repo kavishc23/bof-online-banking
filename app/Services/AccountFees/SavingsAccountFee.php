@@ -62,6 +62,10 @@ class SavingsAccountFee implements AccountFeeCalculator, ProvidesAccountFeeSumma
      */
     private function isWithdrawalForAccount(array $transaction, array $account): bool
     {
+        if ($this->isSavingsWithdrawalFeeTransaction($transaction)) {
+            return false;
+        }
+
         $transactionType = strtolower((string) ($transaction['transactionType'] ?? ''));
 
         if (in_array($transactionType, ['withdrawal', 'billpayment'], true)) {
@@ -70,5 +74,23 @@ class SavingsAccountFee implements AccountFeeCalculator, ProvidesAccountFeeSumma
 
         return $transactionType === 'transfer'
             && AccountTransactionMatcher::matchesAccount($transaction['sourceAccount'] ?? null, $account);
+    }
+
+    /**
+     * @param  array<string, mixed>  $transaction
+     */
+    private function isSavingsWithdrawalFeeTransaction(array $transaction): bool
+    {
+        $referenceNumber = strtoupper((string) ($transaction['referenceNumber'] ?? ''));
+        $description = strtolower((string) ($transaction['description'] ?? ''));
+        $transactionType = strtolower((string) ($transaction['transactionType'] ?? ''));
+        $transferType = strtolower((string) ($transaction['transferType'] ?? ''));
+
+        return $transactionType === 'fee'
+            || $transferType === 'fee'
+            || str_starts_with($referenceNumber, 'WDL-FEE-')
+            || str_starts_with($referenceNumber, 'FEE-')
+            || str_contains($description, 'savings withdrawal fee')
+            || str_contains($description, 'monthly account fee');
     }
 }
