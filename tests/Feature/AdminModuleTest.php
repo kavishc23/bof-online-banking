@@ -36,6 +36,24 @@ function fakeAdminStrapi(): void
                     'monthlyMaintenanceFee' => 0,
                     'interestRate' => 0.02,
                     'openedAt' => '2026-05-09T00:00:00.000Z',
+                    'customer' => [
+                        'firstName' => 'Jane',
+                        'email' => 'jane@example.com',
+                    ],
+                ],
+                [
+                    'id' => 2,
+                    'documentId' => 'account-2',
+                    'accountNumber' => '3003',
+                    'accountType' => 'Business',
+                    'balance' => 5000,
+                    'monthlyMaintenanceFee' => 20,
+                    'interestRate' => 0.01,
+                    'openedAt' => '2026-05-08T00:00:00.000Z',
+                    'customer' => [
+                        'firstName' => 'Ravi',
+                        'email' => 'ravi@example.com',
+                    ],
                 ],
             ],
         ]),
@@ -48,7 +66,30 @@ function fakeAdminStrapi(): void
                     'amount' => 100,
                     'transactionDate' => '2026-05-09T00:00:00.000Z',
                     'transactionStatus' => 'Completed',
+                    'description' => 'Salary deposit',
+                    'account' => [
+                        'accountNumber' => '1001',
+                    ],
                 ],
+                [
+                    'id' => 2,
+                    'documentId' => 'transaction-2',
+                    'referenceNumber' => 'TXN-2',
+                    'transactionType' => 'Transfer',
+                    'amount' => 250,
+                    'transactionDate' => '2026-05-08T00:00:00.000Z',
+                    'transactionStatus' => 'Pending',
+                    'description' => 'Rent transfer',
+                    'sourceAccount' => [
+                        'accountNumber' => '3003',
+                    ],
+                ],
+            ],
+        ]),
+        '*localhost:1337/api/customers*' => Http::response([
+            'data' => [
+                ['id' => 1, 'email' => 'jane@example.com'],
+                ['id' => 2, 'email' => 'ravi@example.com'],
             ],
         ]),
         '*localhost:1337/api/loan-applications*' => Http::response([
@@ -95,6 +136,19 @@ function fakeAdminStrapi(): void
                 ],
             ],
         ]),
+        '*localhost:1337/api/chatbot-faqs*' => Http::response([
+            'data' => [
+                [
+                    'id' => 51,
+                    'documentId' => 'faq-51',
+                    'question' => 'How do I check my balance?',
+                    'keywords' => ['balance'],
+                    'answer' => 'Use Dashboard.',
+                    'category' => 'Accounts',
+                    'isActive' => true,
+                ],
+            ],
+        ]),
     ]);
 }
 
@@ -130,6 +184,52 @@ test('admin can view all transactions', function () {
 
     $response->assertOk();
     $response->assertSee('TXN-1');
+});
+
+test('customer cannot view admin transactions page', function () {
+    $response = $this->withSession(customerSession())->get('/admin/transactions');
+
+    $response->assertRedirect('/dashboard');
+});
+
+test('admin can filter accounts', function () {
+    fakeAdminStrapi();
+
+    $response = $this->withSession(adminSession())->get('/admin/accounts?accountType=Business');
+
+    $response->assertOk();
+    $response->assertSee('3003');
+    $response->assertDontSee('jane@example.com');
+});
+
+test('admin can search accounts', function () {
+    fakeAdminStrapi();
+
+    $response = $this->withSession(adminSession())->get('/admin/accounts?search=1001');
+
+    $response->assertOk();
+    $response->assertSee('1001');
+    $response->assertDontSee('ravi@example.com');
+});
+
+test('admin can filter transactions', function () {
+    fakeAdminStrapi();
+
+    $response = $this->withSession(adminSession())->get('/admin/transactions?transactionType=Transfer');
+
+    $response->assertOk();
+    $response->assertSee('TXN-2');
+    $response->assertDontSee('TXN-1');
+});
+
+test('admin can search transactions', function () {
+    fakeAdminStrapi();
+
+    $response = $this->withSession(adminSession())->get('/admin/transactions?search=salary');
+
+    $response->assertOk();
+    $response->assertSee('TXN-1');
+    $response->assertDontSee('TXN-2');
 });
 
 test('admin can view loan applications', function () {

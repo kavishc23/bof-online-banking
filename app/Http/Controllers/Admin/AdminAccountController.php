@@ -6,17 +6,30 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminAccountRequest;
 use App\Services\Admin\AdminAccountService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AdminAccountController extends Controller
 {
     public function __construct(private readonly AdminAccountService $accounts) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         return view('admin.accounts.index', [
-            'accounts' => $this->accounts->accounts(),
+            'accounts' => $this->accounts->filteredAccounts($request->query()),
+            'filters' => $request->query(),
         ]);
+    }
+
+    public function show(string $id): View|RedirectResponse
+    {
+        $detail = $this->accounts->detail($id);
+
+        if (! $detail) {
+            return redirect()->route('admin.accounts.index')->with('error', 'Account not found.');
+        }
+
+        return view('admin.accounts.show', $detail);
     }
 
     public function create(): View

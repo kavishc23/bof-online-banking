@@ -6,16 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminSupportTicketRequest;
 use App\Services\Support\SupportTicketService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AdminSupportTicketController extends Controller
 {
     public function __construct(private readonly SupportTicketService $tickets) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         return view('admin.support-tickets.index', [
-            'tickets' => $this->tickets->tickets(),
+            'tickets' => $this->tickets->filteredTickets($request->query()),
+            'filters' => $request->query(),
         ]);
     }
 

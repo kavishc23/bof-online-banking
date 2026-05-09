@@ -934,6 +934,11 @@
                             <span class="menu-icon">🔔</span>
                             <span class="menu-text">Notification Settings</span>
                         </a>
+
+                        <a href="{{ route('admin.chatbot-faqs.index') }}" class="{{ request()->routeIs('admin.chatbot-faqs.*') ? 'active' : '' }}">
+                            <span class="menu-icon">🤖</span>
+                            <span class="menu-text">Chatbot FAQs</span>
+                        </a>
                     </nav>
                 </div>
             @else
@@ -985,6 +990,11 @@
                         <a href="{{ route('scheduled-payments') }}" class="{{ request()->routeIs('scheduled-payments') ? 'active' : '' }}">
                             <span class="menu-icon">🗓️</span>
                             <span class="menu-text">Scheduled Payments</span>
+                        </a>
+
+                        <a href="{{ route('support-chat.index') }}" class="{{ request()->routeIs('support-chat.*') ? 'active' : '' }}">
+                            <span class="menu-icon">🎧</span>
+                            <span class="menu-text">Live Chat Support</span>
                         </a>
 
                         <a href="{{ route('account-statement') }}" class="{{ request()->routeIs('account-statement') ? 'active' : '' }}">

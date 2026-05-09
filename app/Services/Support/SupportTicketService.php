@@ -24,6 +24,19 @@ class SupportTicketService
         ]));
     }
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array<int, array<string, mixed>>
+     */
+    public function filteredTickets(array $filters): array
+    {
+        return collect($this->tickets())
+            ->filter(fn (array $ticket): bool => $this->matchesFilters($ticket, $filters))
+            ->sortBy($this->sortField($filters), SORT_REGULAR, ($filters['direction'] ?? 'desc') === 'desc')
+            ->values()
+            ->all();
+    }
+
     public function find(string $id): ?array
     {
         $response = $this->strapi->get('/api/support-tickets/'.$id, [
@@ -59,5 +72,47 @@ class SupportTicketService
         }
 
         return $response;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function matchesFilters(array $ticket, array $filters): bool
+    {
+        $search = strtolower(trim((string) ($filters['search'] ?? '')));
+
+        if ($search !== '') {
+            $haystack = strtolower(implode(' ', [
+                $ticket['ticketNumber'] ?? '',
+                $ticket['customerName'] ?? '',
+                $ticket['customerEmail'] ?? '',
+                $ticket['subject'] ?? '',
+            ]));
+
+            if (! str_contains($haystack, $search)) {
+                return false;
+            }
+        }
+
+        if (! empty($filters['ticketStatus']) && ($ticket['ticketStatus'] ?? null) !== $filters['ticketStatus']) {
+            return false;
+        }
+
+        if (($filters['satisfactionRating'] ?? '') !== '' && (string) ($ticket['satisfactionRating'] ?? '') !== (string) $filters['satisfactionRating']) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function sortField(array $filters): callable
+    {
+        return match ($filters['sort'] ?? 'createdAt') {
+            'ticketStatus' => fn (array $ticket): string => (string) ($ticket['ticketStatus'] ?? ''),
+            default => fn (array $ticket): string => (string) ($ticket['createdAt'] ?? ''),
+        };
     }
 }

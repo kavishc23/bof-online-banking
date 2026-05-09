@@ -10,6 +10,7 @@
             <div><strong>Email</strong><br>{{ $ticket['customerEmail'] ?? '-' }}</div>
             <div><strong>Subject</strong><br>{{ $ticket['subject'] ?? '-' }}</div>
             <div><strong>Status</strong><br>{{ $ticket['ticketStatus'] ?? '-' }}</div>
+            <div><strong>Bot Assisted</strong><br>{{ !empty($ticket['consultantReply']) && in_array($ticket['ticketStatus'] ?? '', ['InProgress', 'Resolved'], true) ? 'Yes' : 'No' }}</div>
             <div><strong>Rating</strong><br>{{ $ticket['satisfactionRating'] ?? '-' }}</div>
             <div><strong>Resolved At</strong><br>{{ !empty($ticket['resolvedAt']) ? \Carbon\Carbon::parse($ticket['resolvedAt'])->format('d M Y H:i') : '-' }}</div>
         </div>
@@ -18,6 +19,17 @@
     <section class="admin-card">
         <h3>Customer Message</h3>
         <p>{{ $ticket['message'] ?? '-' }}</p>
+        @if(!empty($ticket['faqMatchedQuestion']))
+            <h3>Matched FAQ</h3>
+            <p>{{ $ticket['faqMatchedQuestion'] }}</p>
+        @endif
+        @if(!empty($ticket['automatedReply']))
+            <h3>Bot Reply</h3>
+            <p>{{ $ticket['automatedReply'] }}</p>
+        @elseif(!empty($ticket['consultantReply']) && in_array($ticket['ticketStatus'] ?? '', ['InProgress', 'Resolved'], true))
+            <h3>Bot/Consultant Reply</h3>
+            <p>{{ $ticket['consultantReply'] }}</p>
+        @endif
         @if(!empty($ticket['satisfactionComment']))
             <h3>Satisfaction Comment</h3>
             <p>{{ $ticket['satisfactionComment'] }}</p>
@@ -47,4 +59,3 @@
         </form>
     </section>
 @endsection
-

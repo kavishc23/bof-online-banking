@@ -2,6 +2,7 @@
 
 namespace App\Services\Admin;
 
+use App\Services\AccountFees\MonthlyAccountFeeService;
 use App\Services\Audit\AdminAuditLogger;
 use App\Services\Strapi\StrapiApiService;
 use Carbon\Carbon;
@@ -12,6 +13,7 @@ class AdminAccountService
     public function __construct(
         private readonly StrapiApiService $strapi,
         private readonly AdminAuditLogger $audit,
+        private readonly MonthlyAccountFeeService $monthlyFees,
     ) {}
 
     /**
@@ -24,6 +26,24 @@ class AdminAccountService
         ]));
     }
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array<int, array<string, mixed>>
+     */
+    public function filteredAccounts(array $filters): array
+    {
+        $accounts = $this->accounts();
+        $transactions = $this->transactions();
+        $feeSummaries = $this->monthlyFees->summaries($accounts, $transactions, now()->format('Y-m'));
+
+        return collect($accounts)
+            ->map(fn (array $account): array => $this->withFeeSummary($account, $feeSummaries))
+            ->filter(fn (array $account): bool => $this->matchesFilters($account, $filters))
+            ->sortBy($this->sortField($filters), SORT_REGULAR, ($filters['direction'] ?? 'asc') === 'desc')
+            ->values()
+            ->all();
+    }
+
     public function find(string $id): ?array
     {
         $response = $this->strapi->get('/api/accounts/'.$id, [
@@ -31,6 +51,26 @@ class AdminAccountService
         ]);
 
         return $response->json('data');
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function detail(string $id): ?array
+    {
+        $account = $this->find($id);
+
+        if (! $account) {
+            return null;
+        }
+
+        $transactions = $this->accountTransactions($account, $this->transactions());
+        $feeSummary = $this->monthlyFees->summary($account, $transactions, now()->format('Y-m'));
+
+        return [
+            'account' => $account + ['feeSummary' => $feeSummary],
+            'transactions' => array_slice($transactions, 0, 8),
+        ];
     }
 
     /**
@@ -94,5 +134,96 @@ class AdminAccountService
         }
 
         return $payload;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function transactions(): array
+    {
+        return $this->strapi->data($this->strapi->get('/api/transactions', [
+            'populate' => '*',
+            'sort' => 'transactionDate:desc',
+        ]));
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $transactions
+     * @return array<int, array<string, mixed>>
+     */
+    private function accountTransactions(array $account, array $transactions): array
+    {
+        return collect($transactions)
+            ->filter(fn (array $transaction): bool => $this->relationMatches($transaction['account'] ?? null, $account)
+                || $this->relationMatches($transaction['sourceAccount'] ?? null, $account)
+                || $this->relationMatches($transaction['destinationAccount'] ?? null, $account))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $feeSummaries
+     */
+    private function withFeeSummary(array $account, array $feeSummaries): array
+    {
+        $key = (string) ($account['accountNumber'] ?? $account['id'] ?? '');
+
+        return $account + ['feeSummary' => $feeSummaries[$key] ?? null];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function matchesFilters(array $account, array $filters): bool
+    {
+        $search = strtolower(trim((string) ($filters['search'] ?? '')));
+
+        if ($search !== '' && ! str_contains(strtolower((string) ($account['accountNumber'] ?? '')), $search)) {
+            return false;
+        }
+
+        if (! empty($filters['accountType']) && ($account['accountType'] ?? null) !== $filters['accountType']) {
+            return false;
+        }
+
+        $balance = (float) ($account['balance'] ?? 0);
+
+        if (($filters['minBalance'] ?? '') !== '' && $balance < (float) $filters['minBalance']) {
+            return false;
+        }
+
+        if (($filters['maxBalance'] ?? '') !== '' && $balance > (float) $filters['maxBalance']) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function sortField(array $filters): callable
+    {
+        return match ($filters['sort'] ?? 'accountNumber') {
+            'accountType' => fn (array $account): string => (string) ($account['accountType'] ?? ''),
+            'balance' => fn (array $account): float => (float) ($account['balance'] ?? 0),
+            'openedAt' => fn (array $account): string => (string) ($account['openedAt'] ?? ''),
+            default => fn (array $account): string => (string) ($account['accountNumber'] ?? ''),
+        };
+    }
+
+    private function relationMatches(mixed $relation, array $account): bool
+    {
+        if (is_numeric($relation)) {
+            return (int) $relation === (int) ($account['id'] ?? 0);
+        }
+
+        if (! is_array($relation)) {
+            return false;
+        }
+
+        return (string) ($relation['id'] ?? '') === (string) ($account['id'] ?? null)
+            || (string) ($relation['documentId'] ?? '') === (string) ($account['documentId'] ?? null)
+            || (string) ($relation['accountNumber'] ?? '') === (string) ($account['accountNumber'] ?? null);
     }
 }
