@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\Request;
+use Illuminate\View\View;
+use Throwable;
 
 class AccountStatementController extends Controller
 {
-    private function getStatements()
+    private function getStatements(): array
     {
         return [
             [
@@ -68,43 +69,56 @@ class AccountStatementController extends Controller
         ];
     }
 
-    public function index()
+    public function index(): View
     {
         $statements = $this->getStatements();
+
         return view('account-statement', compact('statements'));
     }
 
-    public function download($id)
+    public function download(string $id): mixed
     {
-        $statements = collect($this->getStatements())
-            ->flatMap(fn ($group) => $group['items'])
-            ->firstWhere('id', $id);
+        try {
+            $statements = collect($this->getStatements())
+                ->flatMap(fn ($group) => $group['items'])
+                ->firstWhere('id', $id);
 
-        if (!$statements) {
-            abort(404);
+            if (! $statements) {
+                abort(404);
+            }
+
+            $pdf = Pdf::loadView('pdf.account-statement-pdf', [
+                'statement' => $statements,
+            ])->setPaper('a4', 'portrait');
+
+            return $pdf->download($statements['name'].'.pdf');
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Account statement could not be downloaded. Please try again.');
         }
-
-        $pdf = Pdf::loadView('pdf.account-statement-pdf', [
-            'statement' => $statements
-        ])->setPaper('a4', 'portrait');
-
-        return $pdf->download($statements['name'] . '.pdf');
     }
 
-    public function preview($id)
+    public function preview(string $id): mixed
     {
-        $statements = collect($this->getStatements())
-            ->flatMap(fn ($group) => $group['items'])
-            ->firstWhere('id', $id);
+        try {
+            $statements = collect($this->getStatements())
+                ->flatMap(fn ($group) => $group['items'])
+                ->firstWhere('id', $id);
 
-        if (!$statements) {
-            abort(404);
+            if (! $statements) {
+                abort(404);
+            }
+
+            $pdf = Pdf::loadView('pdf.account-statement-pdf', [
+                'statement' => $statements,
+            ])->setPaper('a4', 'portrait');
+
+            return $pdf->stream($statements['name'].'.pdf');
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Account statement could not be previewed. Please try again.');
         }
-
-        $pdf = Pdf::loadView('pdf.account-statement-pdf', [
-            'statement' => $statements
-        ])->setPaper('a4', 'portrait');
-
-        return $pdf->stream($statements['name'] . '.pdf');
     }
 }
