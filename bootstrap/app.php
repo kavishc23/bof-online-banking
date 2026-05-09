@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\BankingOperationException;
+use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\EnsureBankingSession;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\LogFailedBankingRequest;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
+            'admin' => AdminMiddleware::class,
             'banking.session' => EnsureBankingSession::class,
             'role' => EnsureRole::class,
         ]);

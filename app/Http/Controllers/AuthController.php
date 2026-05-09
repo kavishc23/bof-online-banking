@@ -56,12 +56,17 @@ class AuthController extends Controller
                 'jwt' => $jwt,
                 'user' => $user,
                 'customer' => $result['customer'],
+                'user_role' => $result['customer']['userRole'] ?? $user['userRole'] ?? 'Customer',
                 'transactions' => $result['transactions'],
             ]);
 
             event(new BankingActivityOccurred('login.succeeded', 'Customer login succeeded.', [
                 'email' => $user['email'] ?? $request->identifier,
             ]));
+
+            if (session('user_role') === 'Admin') {
+                return redirect()->route('admin.dashboard');
+            }
 
             return redirect('/dashboard');
         } catch (Throwable $exception) {
@@ -75,6 +80,7 @@ class AuthController extends Controller
             'jwt',
             'user',
             'customer',
+            'user_role',
             'transactions',
             'pending_otp',
             'pending_action',

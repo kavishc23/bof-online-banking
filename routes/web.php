@@ -1,6 +1,12 @@
 <?php
 
 use App\Http\Controllers\AccountStatementController;
+use App\Http\Controllers\Admin\AdminAccountController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminLoanController;
+use App\Http\Controllers\Admin\AdminNotificationSettingsController;
+use App\Http\Controllers\Admin\AdminSupportTicketController;
+use App\Http\Controllers\Admin\AdminTransactionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BeneficiaryController;
 use App\Http\Controllers\BillPaymentController;
@@ -19,6 +25,22 @@ Route::get('/', [AuthController::class, 'redirectToLogin']);
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::middleware(['admin', 'throttle:60,1'])->prefix('admin')->name('admin.')->group(function (): void {
+    Route::get('/', AdminDashboardController::class)->name('dashboard');
+    Route::get('/accounts', [AdminAccountController::class, 'index'])->name('accounts.index');
+    Route::get('/accounts/create', [AdminAccountController::class, 'create'])->name('accounts.create');
+    Route::post('/accounts', [AdminAccountController::class, 'store'])->name('accounts.store');
+    Route::get('/accounts/{id}/edit', [AdminAccountController::class, 'edit'])->name('accounts.edit');
+    Route::match(['put', 'patch'], '/accounts/{id}', [AdminAccountController::class, 'update'])->name('accounts.update');
+    Route::get('/transactions', [AdminTransactionController::class, 'index'])->name('transactions.index');
+    Route::get('/loans', [AdminLoanController::class, 'index'])->name('loans.index');
+    Route::get('/support-tickets', [AdminSupportTicketController::class, 'index'])->name('support-tickets.index');
+    Route::get('/support-tickets/{id}', [AdminSupportTicketController::class, 'show'])->name('support-tickets.show');
+    Route::patch('/support-tickets/{id}', [AdminSupportTicketController::class, 'update'])->name('support-tickets.update');
+    Route::get('/notification-settings', [AdminNotificationSettingsController::class, 'index'])->name('notification-settings.index');
+    Route::patch('/notification-settings', [AdminNotificationSettingsController::class, 'update'])->name('notification-settings.update');
+});
 
 Route::middleware(['banking.session', 'throttle:60,1'])->group(function (): void {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

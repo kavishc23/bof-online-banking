@@ -872,6 +872,9 @@
     @stack('styles')
 </head>
 <body>
+@php
+    $isAdminArea = request()->routeIs('admin.*');
+@endphp
 <div class="layout">
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-top">
@@ -880,118 +883,169 @@
                     <div class="brand">
                         <h1>
                             <span class="brand-mark">BoF</span>
-                            <span class="brand-name-text">BoF</span>
+                            <span class="brand-name-text">{{ $isAdminArea ? 'BoF Admin' : 'BoF' }}</span>
                         </h1>
-                        <p>Online Banking Portal</p>
+                        <p>{{ $isAdminArea ? 'Administration Portal' : 'Online Banking Portal' }}</p>
                     </div>
                     <button class="toggle-btn" id="sidebarToggle" type="button" aria-label="Toggle sidebar">☰</button>
                 </div>
 
                 <div class="sidebar-shortcuts">
-                    <a href="{{ route('transfer') }}" class="top-shortcut">Transfer</a>
-                    <a href="{{ route('bill-payment') }}" class="top-shortcut">Pay Bill</a>
+                    @if($isAdminArea)
+                        <a href="{{ route('admin.accounts.index') }}" class="top-shortcut">Accounts</a>
+                        <a href="{{ route('admin.support-tickets.index') }}" class="top-shortcut">Tickets</a>
+                    @else
+                        <a href="{{ route('transfer') }}" class="top-shortcut">Transfer</a>
+                        <a href="{{ route('bill-payment') }}" class="top-shortcut">Pay Bill</a>
+                    @endif
                 </div>
             </div>
 
-            <div class="nav-group">
-                <div class="sidebar-section-title">Overview</div>
-                <nav class="menu">
-                    <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                        <span class="menu-icon">🏠</span>
-                        <span class="menu-text">Dashboard</span>
-                    </a>
+            @if($isAdminArea)
+                <div class="nav-group">
+                    <div class="sidebar-section-title">Admin</div>
+                    <nav class="menu">
+                        <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                            <span class="menu-icon">🏠</span>
+                            <span class="menu-text">Dashboard</span>
+                        </a>
 
-                    <a href="{{ route('transactions') }}" class="{{ request()->routeIs('transactions') ? 'active' : '' }}">
-                        <span class="menu-icon">📄</span>
-                        <span class="menu-text">Transactions</span>
-                    </a>
+                        <a href="{{ route('admin.accounts.index') }}" class="{{ request()->routeIs('admin.accounts.*') ? 'active' : '' }}">
+                            <span class="menu-icon">🏦</span>
+                            <span class="menu-text">Accounts</span>
+                        </a>
 
-                    <a href="{{ route('customer-profile') }}" class="{{ request()->routeIs('customer-profile') ? 'active' : '' }}">
-                        <span class="menu-icon">👤</span>
-                        <span class="menu-text">Customer Profile</span>
-                    </a>
-                </nav>
-            </div>
+                        <a href="{{ route('admin.transactions.index') }}" class="{{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}">
+                            <span class="menu-icon">📄</span>
+                            <span class="menu-text">All Transactions</span>
+                        </a>
 
-            <div class="nav-group">
-                <div class="sidebar-section-title">Payments</div>
-                <nav class="menu">
-                    <a href="{{ route('transfer') }}" class="{{ request()->routeIs('transfer') ? 'active' : '' }}">
-                        <span class="menu-icon">🔁</span>
-                        <span class="menu-text">Transfer Money</span>
-                    </a>
+                        <a href="{{ route('admin.loans.index') }}" class="{{ request()->routeIs('admin.loans.*') ? 'active' : '' }}">
+                            <span class="menu-icon">📑</span>
+                            <span class="menu-text">Loan Applications</span>
+                        </a>
 
-                    <a href="{{ route('bill-payment') }}" class="{{ request()->routeIs('bill-payment') ? 'active' : '' }}">
-                        <span class="menu-icon">💡</span>
-                        <span class="menu-text">Bill Payment</span>
-                    </a>
+                        <a href="{{ route('admin.support-tickets.index') }}" class="{{ request()->routeIs('admin.support-tickets.*') ? 'active' : '' }}">
+                            <span class="menu-icon">🎧</span>
+                            <span class="menu-text">Support Tickets</span>
+                        </a>
 
-                    <a href="{{ route('beneficiaries') }}" class="{{ request()->routeIs('beneficiaries') ? 'active' : '' }}">
-                        <span class="menu-icon">👥</span>
-                        <span class="menu-text">Beneficiaries</span>
-                    </a>
+                        <a href="{{ route('admin.notification-settings.index') }}" class="{{ request()->routeIs('admin.notification-settings.*') ? 'active' : '' }}">
+                            <span class="menu-icon">🔔</span>
+                            <span class="menu-text">Notification Settings</span>
+                        </a>
+                    </nav>
+                </div>
+            @else
+                <div class="nav-group">
+                    <div class="sidebar-section-title">Overview</div>
+                    <nav class="menu">
+                        @if(session('user_role') === 'Admin')
+                            <a href="{{ route('admin.dashboard') }}">
+                                <span class="menu-icon">🛡</span>
+                                <span class="menu-text">Admin Module</span>
+                            </a>
+                        @endif
 
-                    <a href="{{ route('scheduled-payments') }}" class="{{ request()->routeIs('scheduled-payments') ? 'active' : '' }}">
-                        <span class="menu-icon">🗓️</span>
-                        <span class="menu-text">Scheduled Payments</span>
-                    </a>
+                        <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                            <span class="menu-icon">🏠</span>
+                            <span class="menu-text">Dashboard</span>
+                        </a>
 
-                    <a href="{{ route('account-statement') }}" class="{{ request()->routeIs('account-statement') ? 'active' : '' }}">
-                        <span class="menu-icon">📑</span>
-                        <span class="menu-text">Account Statement</span>
-                    </a>
-                </nav>
-            </div>
+                        <a href="{{ route('transactions') }}" class="{{ request()->routeIs('transactions') ? 'active' : '' }}">
+                            <span class="menu-icon">📄</span>
+                            <span class="menu-text">Transactions</span>
+                        </a>
 
-            <div class="nav-group">
-                <div class="sidebar-section-title">Lending</div>
-                <nav class="menu">
-                    <a href="{{ route('loan-application') }}" class="{{ request()->routeIs('loan-application') ? 'active' : '' }}">
-                        <span class="menu-icon">📑</span>
-                        <span class="menu-text">Loan Application</span>
-                    </a>
+                        <a href="{{ route('customer-profile') }}" class="{{ request()->routeIs('customer-profile') ? 'active' : '' }}">
+                            <span class="menu-icon">👤</span>
+                            <span class="menu-text">Customer Profile</span>
+                        </a>
+                    </nav>
+                </div>
 
-                    <a href="{{ route('my-loans') }}" class="{{ request()->routeIs('my-loans') ? 'active' : '' }}">
-                        <span class="menu-icon">🏦</span>
-                        <span class="menu-text">My Loans</span>
-                    </a>
+                <div class="nav-group">
+                    <div class="sidebar-section-title">Payments</div>
+                    <nav class="menu">
+                        <a href="{{ route('transfer') }}" class="{{ request()->routeIs('transfer') ? 'active' : '' }}">
+                            <span class="menu-icon">🔁</span>
+                            <span class="menu-text">Transfer Money</span>
+                        </a>
 
-                    <a href="{{ route('loan-products') }}" class="{{ request()->routeIs('loan-products') ? 'active' : '' }}">
-                        <span class="menu-icon">📢</span>
-                        <span class="menu-text">Loan Products</span>
-                    </a>
-                </nav>
-            </div>
+                        <a href="{{ route('bill-payment') }}" class="{{ request()->routeIs('bill-payment') ? 'active' : '' }}">
+                            <span class="menu-icon">💡</span>
+                            <span class="menu-text">Bill Payment</span>
+                        </a>
 
-            <div class="nav-group">
-                <div class="sidebar-section-title">Wealth</div>
-                <nav class="menu">
-                    <a href="{{ route('investments') }}" class="{{ request()->routeIs('investments') ? 'active' : '' }}">
-                        <span class="menu-icon">📈</span>
-                        <span class="menu-text">Investments</span>
-                    </a>
+                        <a href="{{ route('beneficiaries') }}" class="{{ request()->routeIs('beneficiaries') ? 'active' : '' }}">
+                            <span class="menu-icon">👥</span>
+                            <span class="menu-text">Beneficiaries</span>
+                        </a>
 
-                    <a href="{{ route('my-investments') }}" class="{{ request()->routeIs('my-investments') ? 'active' : '' }}">
-                        <span class="menu-icon">💼</span>
-                        <span class="menu-text">My Investments</span>
-                    </a>
-                </nav>
-            </div>
+                        <a href="{{ route('scheduled-payments') }}" class="{{ request()->routeIs('scheduled-payments') ? 'active' : '' }}">
+                            <span class="menu-icon">🗓️</span>
+                            <span class="menu-text">Scheduled Payments</span>
+                        </a>
 
-            <div class="nav-group">
-                <div class="sidebar-section-title">Tax report</div>
-                <nav class="menu">
-                    <a href="{{ route('tax-report') }}" class="{{ request()->routeIs('tax-report') ? 'active' : '' }}">
-                        <span class="menu-icon">🧾</span>
-                        <span class="menu-text">Tax Report</span>
-                    </a>
-                </nav>
-            </div>
+                        <a href="{{ route('account-statement') }}" class="{{ request()->routeIs('account-statement') ? 'active' : '' }}">
+                            <span class="menu-icon">📑</span>
+                            <span class="menu-text">Account Statement</span>
+                        </a>
+                    </nav>
+                </div>
+
+                <div class="nav-group">
+                    <div class="sidebar-section-title">Lending</div>
+                    <nav class="menu">
+                        <a href="{{ route('loan-application') }}" class="{{ request()->routeIs('loan-application') ? 'active' : '' }}">
+                            <span class="menu-icon">📑</span>
+                            <span class="menu-text">Loan Application</span>
+                        </a>
+
+                        <a href="{{ route('my-loans') }}" class="{{ request()->routeIs('my-loans') ? 'active' : '' }}">
+                            <span class="menu-icon">🏦</span>
+                            <span class="menu-text">My Loans</span>
+                        </a>
+
+                        <a href="{{ route('loan-products') }}" class="{{ request()->routeIs('loan-products') ? 'active' : '' }}">
+                            <span class="menu-icon">📢</span>
+                            <span class="menu-text">Loan Products</span>
+                        </a>
+                    </nav>
+                </div>
+
+                <div class="nav-group">
+                    <div class="sidebar-section-title">Wealth</div>
+                    <nav class="menu">
+                        <a href="{{ route('investments') }}" class="{{ request()->routeIs('investments') ? 'active' : '' }}">
+                            <span class="menu-icon">📈</span>
+                            <span class="menu-text">Investments</span>
+                        </a>
+
+                        <a href="{{ route('my-investments') }}" class="{{ request()->routeIs('my-investments') ? 'active' : '' }}">
+                            <span class="menu-icon">💼</span>
+                            <span class="menu-text">My Investments</span>
+                        </a>
+                    </nav>
+                </div>
+
+                <div class="nav-group">
+                    <div class="sidebar-section-title">Tax report</div>
+                    <nav class="menu">
+                        <a href="{{ route('tax-report') }}" class="{{ request()->routeIs('tax-report') ? 'active' : '' }}">
+                            <span class="menu-icon">🧾</span>
+                            <span class="menu-text">Tax Report</span>
+                        </a>
+                    </nav>
+                </div>
+            @endif
         </div>
 
         <div class="sidebar-bottom">
             <div class="sidebar-footer-note">
-                Secure demo banking workspace for customer account access, payments, transfers, beneficiaries, lending, and transaction tracking.
+                {{ $isAdminArea
+                    ? 'Secure administration workspace for accounts, transactions, loans, support tickets, and notifications.'
+                    : 'Secure demo banking workspace for customer account access, payments, transfers, beneficiaries, lending, and transaction tracking.' }}
             </div>
 
             <form class="logout-form" method="POST" action="{{ route('logout') }}">
@@ -1008,7 +1062,7 @@
         <div class="page-shell">
             <div class="top-utility">
                 <div class="top-utility-left">
-                    <div class="eyebrow">Digital Banking Workspace</div>
+                    <div class="eyebrow">{{ $isAdminArea ? 'Administration Workspace' : 'Digital Banking Workspace' }}</div>
                     <div class="date-line">
                         {{ now()->format('l, d M Y') }}
                     </div>
@@ -1028,7 +1082,7 @@
                         </div>
                         <div class="profile-meta">
                             <strong>{{ session('customer.firstName', session('user.username', 'User')) }}</strong>
-                            <span>Logged in customer</span>
+                            <span>{{ $isAdminArea ? 'Logged in administrator' : 'Logged in customer' }}</span>
                         </div>
                     </div>
                 </div>
