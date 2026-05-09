@@ -333,6 +333,27 @@
         color: var(--tx-text);
     }
 
+    .tx-crdr {
+        margin-left: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        background: var(--tx-primary);
+        color: white;
+    }
+
+    .tx-crdr.cr {
+        background: var(--tx-processed-bg);
+        color: var(--tx-processed-text);
+    }
+
+    .tx-crdr.dr {
+        background: var(--tx-failed-bg);
+        color: var(--tx-failed-text);
+    }
+
     .tx-reason {
         display: flex;
         flex-direction: column;
@@ -592,6 +613,8 @@
                                     default => ucfirst($transferType ?: $transactionType ?: 'Transaction'),
                                 };
 
+                                $isCredit = $transferType === 'deposit';
+
                                 $typeSub = 'Acct: ' . $accountNumber;
 
                                 $reasonSub = $transaction['destinationInstitution']
@@ -658,7 +681,10 @@
                                     </div>
                                 </td>
 
-                                <td class="tx-amount">{{ number_format($amount, 2) }} FJD</td>
+                                <td class="tx-amount">
+                                    {{ number_format($amount, 2) }} FJD
+                                    <span class="tx-crdr {{ $isCredit ? 'cr' : 'dr' }}">{{ $isCredit ? 'CR' : 'DR' }}</span>
+                                </td>
 
                                 <td>
                                     <div class="tx-reason">

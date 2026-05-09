@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\BankingActivityOccurred;
 use App\Http\Requests\BillPaymentRequest;
 use App\Services\BofService;
 use Illuminate\Http\RedirectResponse;
@@ -15,10 +16,6 @@ class BillPaymentController extends Controller
 
     public function index(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         return view('bill-payment', [
             'customer' => session('customer'),
             'billers' => $this->bofService->fetchActiveBillers(session('jwt')),
@@ -27,10 +24,6 @@ class BillPaymentController extends Controller
 
     public function submit(BillPaymentRequest $request): RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $jwt = session('jwt');
         $customer = session('customer');
         $user = session('user');
@@ -102,6 +95,13 @@ class BillPaymentController extends Controller
 
             return back()->withInput()->with('error', 'Bill payment could not be scheduled. Please try again.');
         }
+
+        event(new BankingActivityOccurred('bill-payment.scheduled', 'Bill payment scheduled.', [
+            'amount' => $amount,
+            'biller_name' => $selectedBiller['name'] ?? '',
+            'source_account' => $fromAccount['id'],
+            'customer_email' => $user['email'] ?? '',
+        ]));
 
         return redirect('/dashboard')->with('success', 'Bill payment scheduled successfully.');
     }

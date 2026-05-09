@@ -15,10 +15,6 @@ class InvestmentController extends Controller
 
     public function create(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         return view('investments', [
             'customer' => session('customer'),
         ]);
@@ -26,10 +22,6 @@ class InvestmentController extends Controller
 
     public function store(InvestmentRequest $request): RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $jwt = session('jwt');
         $user = session('user');
         $customer = session('customer');
@@ -98,10 +90,6 @@ class InvestmentController extends Controller
 
     public function index(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $user = session('user');
 
         return view('my-investments', [

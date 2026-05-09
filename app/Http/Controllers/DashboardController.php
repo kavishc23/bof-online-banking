@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AccountFees\MonthlyAccountFeeService;
 use App\Services\BofService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -9,19 +10,20 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __construct(private readonly BofService $bofService) {}
+    public function __construct(
+        private readonly BofService $bofService,
+        private readonly MonthlyAccountFeeService $monthlyAccountFeeService,
+    ) {}
 
     public function index(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $customer = session('customer');
         $transactions = session('transactions', []);
         $accounts = $customer['accounts'] ?? [];
         $primaryAccount = $accounts[0] ?? null;
         $recentTransactions = array_slice($transactions, 0, 5);
+        $selectedFeeMonth = now()->format('Y-m');
+        $monthlyAccountFees = $this->monthlyAccountFeeService->summaries($accounts, $transactions, $selectedFeeMonth);
         $totalIncoming = 0;
         $totalOutgoing = 0;
         $billPaymentCount = 0;
@@ -48,6 +50,8 @@ class DashboardController extends Controller
             'primaryAccount',
             'transactions',
             'recentTransactions',
+            'monthlyAccountFees',
+            'selectedFeeMonth',
             'totalIncoming',
             'totalOutgoing',
             'billPaymentCount'
@@ -56,10 +60,6 @@ class DashboardController extends Controller
 
     public function transactions(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $customer = session('customer');
         $transactions = session('transactions', []);
         $accounts = $customer['accounts'] ?? [];

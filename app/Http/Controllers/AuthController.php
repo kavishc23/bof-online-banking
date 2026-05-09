@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\BankingActivityOccurred;
 use App\Http\Requests\LoginRequest;
 use App\Services\BofService;
+use App\Services\Logging\BankingLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +14,10 @@ use Throwable;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly BofService $bofService) {}
+    public function __construct(
+        private readonly BofService $bofService,
+        private readonly BankingLogger $logger,
+    ) {}
 
     public function showLogin(): View
     {
@@ -34,6 +39,10 @@ class AuthController extends Controller
 
             if (! $loginResponse->successful()) {
                 $errorMessage = $loginResponse->json()['error']['message'] ?? 'Invalid login details';
+                $this->logger->activity('login.failed', 'Customer login failed.', [
+                    'identifier' => $request->identifier,
+                    'status' => $loginResponse->status(),
+                ]);
 
                 return back()->withInput()->with('error', $errorMessage);
             }
@@ -49,6 +58,10 @@ class AuthController extends Controller
                 'customer' => $result['customer'],
                 'transactions' => $result['transactions'],
             ]);
+
+            event(new BankingActivityOccurred('login.succeeded', 'Customer login succeeded.', [
+                'email' => $user['email'] ?? $request->identifier,
+            ]));
 
             return redirect('/dashboard');
         } catch (Throwable $exception) {
@@ -71,6 +84,8 @@ class AuthController extends Controller
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        event(new BankingActivityOccurred('logout.succeeded', 'Customer logged out.'));
 
         return redirect('/login');
     }

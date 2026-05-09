@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Events\BankingActivityOccurred;
+use App\Services\Logging\BankingLogger;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Client\Response;
@@ -13,13 +15,20 @@ use Throwable;
 
 class BofService
 {
+    public function __construct(
+        private readonly BankingLogger $logger,
+        private readonly AuditService $audit,
+    ) {}
+
     public function reportApiFailure(string $step, Response $response): void
     {
+        $this->logger->apiFailure($step, $response);
         report(new RuntimeException($step.' failed with status '.$response->status().': '.$response->body()));
     }
 
     public function handleException(Throwable $exception, string $message): RedirectResponse
     {
+        $this->logger->exception($exception, ['friendly_message' => $message]);
         report($exception);
 
         return back()->withInput()->with('error', $message);
@@ -281,6 +290,12 @@ class BofService
                 return back()->withInput()->with('error', 'Beneficiary could not be saved. Please try again.');
             }
 
+            event(new BankingActivityOccurred('beneficiary.created', 'Beneficiary saved successfully.', [
+                'beneficiary_name' => $request->beneficiary_name,
+                'transfer_mode' => $request->transfer_mode,
+                'customer_email' => $email,
+            ]));
+
             return redirect()->route('beneficiaries')->with('success', 'Beneficiary saved successfully.');
         } catch (Throwable $exception) {
             return $this->handleException($exception, 'Beneficiary could not be saved. Please try again.');
@@ -402,6 +417,35 @@ class BofService
             return back()->withInput()->with('error', 'Transfer failed while recording the incoming transaction.');
         }
 
+        $this->audit->record('transfer.internal.completed', [
+            'source_balance' => $fromBalance,
+            'destination_balance' => (float) ($toAccount['balance'] ?? 0),
+        ], [
+            'source_balance' => $fromBalance - $amount,
+            'destination_balance' => (float) ($toAccount['balance'] ?? 0) + $amount,
+        ], [
+            'reference_number' => $referenceOut,
+            'amount' => $amount,
+            'source_account' => $fromAccount['id'],
+            'destination_account' => $toAccount['id'],
+        ]);
+
+        event(new BankingActivityOccurred('transfer.completed', 'Internal transfer completed.', [
+            'reference_number' => $referenceOut,
+            'amount' => $amount,
+            'transfer_type' => 'Internal',
+            'source_account' => $fromAccount['id'],
+            'destination_account' => $toAccount['id'],
+        ]));
+
+        event(new BankingActivityOccurred('transfer.received', 'Internal transfer received.', [
+            'reference_number' => $referenceIn,
+            'amount' => $amount,
+            'transfer_type' => 'Internal',
+            'source_account' => $fromAccount['id'],
+            'destination_account' => $toAccount['id'],
+        ]));
+
         $this->refreshCustomerSession($jwt, $user);
 
         return redirect('/dashboard')->with(
@@ -451,6 +495,25 @@ class BofService
 
             return back()->withInput()->with('error', 'Local bank transfer failed while recording the transaction.');
         }
+
+        $this->audit->record('transfer.local_bank.completed', [
+            'source_balance' => $fromBalance,
+        ], [
+            'source_balance' => $fromBalance - $amount,
+        ], [
+            'reference_number' => $referenceNumber,
+            'amount' => $amount,
+            'source_account' => $fromAccount['id'],
+            'destination_institution' => $selectedInstitution['name'] ?? '',
+        ]);
+
+        event(new BankingActivityOccurred('transfer.completed', 'Local bank transfer completed.', [
+            'reference_number' => $referenceNumber,
+            'amount' => $amount,
+            'transfer_type' => 'LocalBank',
+            'source_account' => $fromAccount['id'],
+            'destination_institution' => $selectedInstitution['name'] ?? '',
+        ]));
 
         $this->refreshCustomerSession($jwt, $user);
 
@@ -543,6 +606,24 @@ class BofService
 
                 return back()->withInput()->with('error', 'Bill payment failed while recording the transaction.');
             }
+
+            $this->audit->record('bill_payment.completed', [
+                'source_balance' => $fromBalance,
+            ], [
+                'source_balance' => $fromBalance - $amount,
+            ], [
+                'reference_number' => $referenceNumber,
+                'amount' => $amount,
+                'biller_name' => $selectedBiller['name'] ?? '',
+                'source_account' => $fromAccount['id'],
+            ]);
+
+            event(new BankingActivityOccurred('bill-payment.completed', 'Bill payment completed.', [
+                'reference_number' => $referenceNumber,
+                'amount' => $amount,
+                'biller_name' => $selectedBiller['name'] ?? '',
+                'source_account' => $fromAccount['id'],
+            ]));
 
             $this->refreshCustomerSession($jwt, $user);
 

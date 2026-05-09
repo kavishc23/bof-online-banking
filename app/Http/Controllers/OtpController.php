@@ -14,10 +14,6 @@ class OtpController extends Controller
 
     public function show(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         if (! session()->has('pending_otp') || ! session()->has('pending_action') || ! session()->has('pending_payload')) {
             return redirect('/dashboard')->with('error', 'No OTP verification is pending.');
         }
@@ -27,10 +23,6 @@ class OtpController extends Controller
 
     public function verify(OtpVerificationRequest $request): RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $otpExpiresAt = session('otp_expires_at');
         $pendingOtp = session('pending_otp');
         $pendingAction = session('pending_action');

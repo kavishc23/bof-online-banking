@@ -13,10 +13,6 @@ class BeneficiaryController extends Controller
 
     public function index(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $user = session('user');
 
         return view('beneficiaries', [
@@ -27,10 +23,6 @@ class BeneficiaryController extends Controller
 
     public function store(BeneficiaryRequest $request): RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $user = session('user');
 
         return $this->bofService->createBeneficiary($request, session('jwt'), $user['email'] ?? '');

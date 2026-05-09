@@ -15,10 +15,6 @@ class CustomerProfileController extends Controller
 
     public function edit(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         return view('customer-profile', [
             'customer' => session('customer'),
         ]);
@@ -26,10 +22,6 @@ class CustomerProfileController extends Controller
 
     public function update(CustomerProfileRequest $request): RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $jwt = session('jwt');
         $user = session('user');
         $customer = session('customer');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\BankingActivityOccurred;
 use App\Http\Requests\TransferRequest;
 use App\Services\BofService;
 use Illuminate\Http\RedirectResponse;
@@ -15,10 +16,6 @@ class TransferController extends Controller
 
     public function index(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $user = session('user');
         $email = $user['email'] ?? '';
 
@@ -31,10 +28,6 @@ class TransferController extends Controller
 
     public function submit(TransferRequest $request): RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $jwt = session('jwt');
         $customer = session('customer');
         $user = session('user');
@@ -119,6 +112,14 @@ class TransferController extends Controller
                 return back()->withInput()->with('error', 'Internal transfer could not be scheduled. Please try again.');
             }
 
+            event(new BankingActivityOccurred('transfer.scheduled', 'Internal transfer scheduled.', [
+                'reference_number' => $referenceNumber,
+                'amount' => $amount,
+                'transfer_type' => 'Internal',
+                'source_account' => $fromAccount['id'],
+                'destination_account' => $toAccount['id'],
+            ]));
+
             return redirect('/dashboard')->with('success', 'Internal transfer scheduled successfully.');
         }
 
@@ -150,6 +151,14 @@ class TransferController extends Controller
 
             return back()->withInput()->with('error', 'Local bank transfer could not be scheduled. Please try again.');
         }
+
+        event(new BankingActivityOccurred('transfer.scheduled', 'Local bank transfer scheduled.', [
+            'reference_number' => $referenceNumber,
+            'amount' => $amount,
+            'transfer_type' => 'LocalBank',
+            'source_account' => $fromAccount['id'],
+            'destination_institution' => $selectedInstitution['name'] ?? '',
+        ]));
 
         return redirect('/dashboard')->with('success', 'Local bank transfer scheduled successfully.');
     }

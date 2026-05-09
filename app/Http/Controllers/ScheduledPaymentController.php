@@ -12,10 +12,6 @@ class ScheduledPaymentController extends Controller
 
     public function index(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $user = session('user');
         $email = $user['email'] ?? '';
 

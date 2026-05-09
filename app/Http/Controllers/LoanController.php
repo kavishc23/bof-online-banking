@@ -16,10 +16,6 @@ class LoanController extends Controller
 
     public function create(Request $request): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         return view('loan-application', [
             'customer' => session('customer'),
             'loanProducts' => $this->bofService->fetchLoanProducts(),
@@ -29,10 +25,6 @@ class LoanController extends Controller
 
     public function store(LoanApplicationRequest $request): RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $jwt = session('jwt');
         $user = session('user');
         $referenceNumber = 'LOAN-'.time();
@@ -101,10 +93,6 @@ class LoanController extends Controller
 
     public function index(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $user = session('user');
 
         return view('my-loans', [
@@ -115,10 +103,6 @@ class LoanController extends Controller
 
     public function products(): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         return view('loan-products', [
             'customer' => session('customer'),
             'loanProducts' => $this->bofService->fetchLoanProducts(),

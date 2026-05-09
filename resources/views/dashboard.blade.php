@@ -248,6 +248,36 @@
         line-height: 1.6;
     }
 
+    .db-account-fee {
+        position: relative;
+        z-index: 1;
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(255,255,255,0.18);
+        display: grid;
+        gap: 6px;
+    }
+
+    .db-account-fee span {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.78;
+        font-weight: 800;
+    }
+
+    .db-account-fee strong {
+        font-size: 1rem;
+        font-weight: 900;
+    }
+
+    .db-account-fee p {
+        margin: 0;
+        font-size: 0.86rem;
+        line-height: 1.45;
+        opacity: 0.86;
+    }
+
     .db-feature-list {
         display: grid;
         gap: 14px;
@@ -422,6 +452,7 @@
 @php
     $accounts = $accounts ?? [];
     $transactions = $transactions ?? [];
+    $monthlyAccountFees = $monthlyAccountFees ?? [];
 
     $totalBalance = collect($accounts)->sum(function ($account) {
         return (float) ($account['balance'] ?? 0);
@@ -444,6 +475,10 @@
             @if(count($accounts))
                 <div class="db-account-grid">
                     @foreach($accounts as $account)
+                        @php
+                            $feeKey = (string) ($account['accountNumber'] ?? $account['id'] ?? '');
+                            $feeSummary = $monthlyAccountFees[$feeKey] ?? null;
+                        @endphp
                         <div class="db-account-card">
                             <div class="db-account-type">
                                 {{ $account['accountType'] ?? 'Account' }}
@@ -455,6 +490,13 @@
                                 Account No: {{ $account['accountNumber'] ?? 'N/A' }}<br>
                                 Currency: {{ $account['currency'] ?? 'FJD' }}
                             </div>
+                            @if($feeSummary)
+                                <div class="db-account-fee">
+                                    <span>Monthly Fee</span>
+                                    <strong>{{ number_format((float) ($feeSummary['calculated_monthly_fee'] ?? 0), 2) }} FJD</strong>
+                                    <p>{{ $feeSummary['explanation'] ?? 'No fee explanation available.' }}</p>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>

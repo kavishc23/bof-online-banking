@@ -15,10 +15,6 @@ class TaxReportController extends Controller
 
     public function index(Request $request): View|RedirectResponse
     {
-        if (! session()->has('jwt')) {
-            return redirect('/login');
-        }
-
         $jwt = session('jwt');
         $user = session('user');
         $email = $user['email'] ?? '';
