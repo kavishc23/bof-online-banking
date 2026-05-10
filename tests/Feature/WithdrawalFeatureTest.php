@@ -81,6 +81,7 @@ test('customer can open withdrawal page', function () {
     $response->assertOk();
     $response->assertSee('Withdraw Funds');
     $response->assertSee('1001');
+    $response->assertSee('value="10"', false);
 });
 
 test('withdrawal creates Withdrawal transaction', function () {
@@ -105,10 +106,10 @@ test('withdrawal creates Withdrawal transaction', function () {
         && $request['data']['remarks'] === 'ATM withdrawal'
         && $request['data']['transactionStatus'] === 'Completed'
         && $request['data']['account'] === 10
-        && $request['data']['sourceAccount'] === 10);
+        && ! isset($request['data']['sourceAccount']));
 });
 
-test('withdrawal appears in session transactions immediately after redirect', function () {
+test('withdrawal session is refreshed from strapi and not manually appended', function () {
     fakeWithdrawalStrapi();
 
     $this->withSession(withdrawalCustomerSession())->post('/withdraw', [
@@ -119,32 +120,23 @@ test('withdrawal appears in session transactions immediately after redirect', fu
 
     $transactions = session('transactions', []);
 
-    expect($transactions)->toHaveCount(1)
-        ->and($transactions[0]['transactionType'])->toBe('Withdrawal')
-        ->and($transactions[0]['transferType'])->toBe('Withdrawal')
-        ->and($transactions[0]['account']['id'])->toBe(10)
-        ->and($transactions[0]['sourceAccount']['id'])->toBe(10);
+    expect($transactions)->toBe([]);
 });
 
-test('new withdrawal preserves older session withdrawal transactions', function () {
-    fakeWithdrawalStrapi();
-
-    $session = withdrawalCustomerSession() + [
-        'transactions' => [
-            [
-                'referenceNumber' => 'WDL-OLD-2026-0001',
-                'transactionType' => 'Withdrawal',
-                'transferType' => 'Withdrawal',
-                'amount' => 25,
-                'transactionDate' => '2026-05-09T10:00:00.000Z',
-                'transactionStatus' => 'Completed',
-                'account' => ['id' => 10, 'accountNumber' => '1001'],
-                'sourceAccount' => ['id' => 10, 'accountNumber' => '1001'],
-            ],
+test('withdrawal appears in session only when returned from strapi refresh', function () {
+    fakeWithdrawalStrapi([
+        [
+            'referenceNumber' => 'WDL-PERSISTED-2026-0001',
+            'transactionType' => 'Withdrawal',
+            'transferType' => 'Withdrawal',
+            'amount' => 100,
+            'transactionDate' => '2026-05-10T10:00:00.000Z',
+            'transactionStatus' => 'Completed',
+            'account' => ['id' => 10, 'accountNumber' => '1001'],
         ],
-    ];
+    ]);
 
-    $this->withSession($session)->post('/withdraw', [
+    $this->withSession(withdrawalCustomerSession())->post('/withdraw', [
         'account_id' => 10,
         'amount' => 100,
     ]);
@@ -153,8 +145,7 @@ test('new withdrawal preserves older session withdrawal transactions', function 
         ->pluck('referenceNumber')
         ->all();
 
-    expect($referenceNumbers)->toContain('WDL-OLD-2026-0001')
-        ->and(collect($referenceNumbers)->filter(fn (string $reference): bool => str_starts_with($reference, 'WDL-'))->count())->toBeGreaterThanOrEqual(2);
+    expect($referenceNumbers)->toContain('WDL-PERSISTED-2026-0001');
 });
 
 test('withdrawal reduces balance', function () {
@@ -167,7 +158,80 @@ test('withdrawal reduces balance', function () {
 
     Http::assertSent(fn ($request): bool => $request->method() === 'PUT'
         && str_contains($request->url(), '/api/accounts/account-10')
+        && ! str_contains($request->url(), '/api/accounts/1001')
         && (float) $request['data']['balance'] === 400.0);
+});
+
+test('failed withdrawal transaction creation shows error and does not update balance', function () {
+    Http::fake([
+        '*localhost:1337/api/transactions*' => Http::response([
+            'error' => [
+                'message' => 'transferType must be one of the following values',
+            ],
+        ], 400),
+        '*localhost:1337/api/accounts/*' => Http::response(['data' => ['id' => 10]]),
+        '*localhost:1337/api/customers*' => Http::response(['data' => []]),
+    ]);
+
+    $response = $this->withSession(withdrawalCustomerSession())->post('/withdraw', [
+        'account_id' => 10,
+        'amount' => 100,
+        'remarks' => 'ATM withdrawal',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error', 'Withdrawal failed while recording the transaction.');
+    $response->assertSessionMissing('success');
+
+    Http::assertNotSent(fn ($request): bool => $request->method() === 'PUT'
+        && str_contains($request->url(), '/api/accounts/'));
+
+});
+
+test('failed withdrawal balance update shows error and does not show success', function () {
+    Http::fake(function ($request) {
+        if ($request->method() === 'GET' && str_contains($request->url(), '/api/transactions')) {
+            return Http::response(['data' => []]);
+        }
+
+        if ($request->method() === 'POST' && str_contains($request->url(), '/api/transactions')) {
+            return Http::response([
+                'data' => [
+                    'id' => 50,
+                    'referenceNumber' => 'WDL-2026-404',
+                ],
+            ]);
+        }
+
+        if ($request->method() === 'PUT' && str_contains($request->url(), '/api/accounts/account-10')) {
+            return Http::response([
+                'error' => ['message' => 'Not Found'],
+            ], 404);
+        }
+
+        if ($request->method() === 'PUT' && str_contains($request->url(), '/api/accounts/1001')) {
+            return Http::response([
+                'error' => ['message' => 'Wrong account identifier'],
+            ], 404);
+        }
+
+        return Http::response(['data' => []]);
+    });
+
+    $response = $this->withSession(withdrawalCustomerSession())->post('/withdraw', [
+        'account_id' => 10,
+        'amount' => 100,
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('error', 'Withdrawal failed while updating account balance.');
+    $response->assertSessionMissing('success');
+
+    Http::assertSent(fn ($request): bool => $request->method() === 'PUT'
+        && str_contains($request->url(), '/api/accounts/account-10'));
+
+    Http::assertNotSent(fn ($request): bool => $request->method() === 'PUT'
+        && str_contains($request->url(), '/api/accounts/1001'));
 });
 
 test('second savings withdrawal creates fee transaction and reduces balance by fee', function () {
@@ -181,16 +245,17 @@ test('second savings withdrawal creates fee transaction and reduces balance by f
     Http::assertSent(fn ($request): bool => $request->method() === 'POST'
         && str_contains($request->url(), '/api/transactions')
         && str_starts_with((string) $request['data']['referenceNumber'], 'WDL-FEE-')
-        && $request['data']['transactionType'] === 'Withdrawal'
-        && $request['data']['transferType'] === 'Withdrawal'
+        && $request['data']['transactionType'] === 'Fee'
+        && $request['data']['transferType'] === 'Fee'
         && (float) $request['data']['amount'] === 5.0
         && $request['data']['description'] === 'Savings withdrawal fee'
         && $request['data']['transactionStatus'] === 'Completed'
         && $request['data']['account'] === 10
-        && $request['data']['sourceAccount'] === 10);
+        && ! isset($request['data']['sourceAccount']));
 
     Http::assertSent(fn ($request): bool => $request->method() === 'PUT'
         && str_contains($request->url(), '/api/accounts/account-10')
+        && ! str_contains($request->url(), '/api/accounts/1001')
         && (float) $request['data']['balance'] === 395.0);
 });
 
@@ -385,6 +450,97 @@ test('withdrawal transaction appears in transaction history from strapi refresh'
     $response->assertSee('WDL-2026-9999');
     $response->assertSee('Withdrawal');
     $response->assertSee('DR');
+});
+
+test('withdrawal transaction survives logout reload when strapi relation is account number', function () {
+    Http::fake([
+        '*localhost:1337/api/customers*' => Http::response([
+            'data' => [
+                [
+                    'id' => 1,
+                    'email' => 'customer@example.com',
+                    'accounts' => [
+                        [
+                            'id' => 10,
+                            'documentId' => 'account-10',
+                            'accountNumber' => '1001',
+                            'accountType' => 'Savings',
+                            'balance' => 400,
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+        '*localhost:1337/api/transactions*' => Http::response([
+            'data' => [
+                [
+                    'referenceNumber' => 'WDL-2026-RELOAD',
+                    'transactionType' => 'Withdrawal',
+                    'transferType' => 'Withdrawal',
+                    'amount' => 100,
+                    'transactionDate' => '2026-05-10T10:00:00.000Z',
+                    'description' => 'Cash withdrawal',
+                    'transactionStatus' => 'Completed',
+                    'account' => 1001,
+                    'sourceAccount' => 1001,
+                ],
+            ],
+        ]),
+    ]);
+
+    $response = $this->withSession(withdrawalCustomerSession())->get('/transactions');
+
+    $response->assertOk();
+    $response->assertSee('WDL-2026-RELOAD');
+    $response->assertSee('Withdrawal');
+});
+
+test('withdrawal transaction appears when strapi returns relation as a list', function () {
+    Http::fake([
+        '*localhost:1337/api/customers*' => Http::response([
+            'data' => [
+                [
+                    'id' => 1,
+                    'email' => 'customer@example.com',
+                    'accounts' => [
+                        [
+                            'id' => 10,
+                            'documentId' => 'account-10',
+                            'accountNumber' => '1001',
+                            'accountType' => 'Savings',
+                            'balance' => 400,
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+        '*localhost:1337/api/transactions*' => Http::response([
+            'data' => [
+                [
+                    'referenceNumber' => 'WDL-2026-LIST',
+                    'transactionType' => 'Withdrawal',
+                    'transferType' => 'Withdrawal',
+                    'amount' => 100,
+                    'transactionDate' => '2026-05-10T10:00:00.000Z',
+                    'description' => 'Cash withdrawal',
+                    'transactionStatus' => 'Completed',
+                    'account' => [
+                        [
+                            'id' => 10,
+                            'documentId' => 'account-10',
+                            'accountNumber' => '1001',
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    ]);
+
+    $response = $this->withSession(withdrawalCustomerSession())->get('/transactions');
+
+    $response->assertOk();
+    $response->assertSee('WDL-2026-LIST');
+    $response->assertSee('Withdrawal');
 });
 
 test('transaction history still shows deposit transfer and bill payment types', function () {

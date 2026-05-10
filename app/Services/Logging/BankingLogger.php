@@ -34,6 +34,19 @@ class BankingLogger
         ]));
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function apiFailureWithPayload(string $step, ClientResponse $response, array $payload): void
+    {
+        Log::channel('banking')->warning('Strapi API request failed.', $this->withActor([
+            'step' => $step,
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'payload' => $payload,
+        ]));
+    }
+
     public function failedRequest(Request $request, int $statusCode): void
     {
         Log::channel('banking')->warning('Failed banking request.', $this->withActor([

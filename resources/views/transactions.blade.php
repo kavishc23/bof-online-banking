@@ -589,61 +589,80 @@
                     <tbody id="transactionTableBody">
                         @foreach($transactions as $index => $transaction)
                             @php
-                                $transactionType = strtolower($transaction['transactionType'] ?? '');
-                                $transferType = strtolower($transaction['transferType'] ?? '');
-                                $statusRaw = strtolower($transaction['transactionStatus'] ?? 'completed');
-                                $amount = (float) ($transaction['amount'] ?? 0);
-                                $normalizedType = $transferType ?: $transactionType;
+                            $transactionType = strtolower($transaction['transactionType'] ?? '');
+                            $transferType = strtolower($transaction['transferType'] ?? '');
+                            $statusRaw = strtolower($transaction['transactionStatus'] ?? 'completed');
+                            $amount = (float) ($transaction['amount'] ?? 0);
 
-                                $reference = $transaction['referenceNumber'] ?? '-';
+                            $normalizedType = $transferType ?: $transactionType;
 
-                                $accountNumber = $transaction['account']['accountNumber']
-                                    ?? $transaction['sourceAccount']['accountNumber']
-                                    ?? $transaction['destinationAccount']['accountNumber']
-                                    ?? '-';
+                            $reference = $transaction['referenceNumber'] ?? '-';
+                            $referenceUpper = strtoupper($reference);
 
-                                $beneficiary = $transaction['beneficiaryName']
-                                    ?? $transaction['billerName']
-                                    ?? ($transactionType === 'withdrawal' ? 'Cash Withdrawal' : null)
-                                    ?? ($transactionType === 'deposit' ? 'Incoming Funds' : '-');
+                            $description = $transaction['description'] ?? '';
+                            $descriptionLower = strtolower($description);
 
-                                $reason = $transaction['description'] ?? ($transaction['remarks'] ?? '-');
+                            $accountNumber = $transaction['account']['accountNumber']
+                                ?? $transaction['sourceAccount']['accountNumber']
+                                ?? $transaction['destinationAccount']['accountNumber']
+                                ?? '-';
 
-                                $dateObject = !empty($transaction['transactionDate'])
-                                    ? \Carbon\Carbon::parse($transaction['transactionDate'])
-                                    : null;
+                            $isSavingsWithdrawalFee =
+                                str_contains($descriptionLower, 'savings withdrawal fee')
+                                || str_starts_with($referenceUpper, 'WDL-FEE');
 
-                                $displayDate = $dateObject ? $dateObject->format('d/m/Y') : '-';
-                                $dateValue = $dateObject ? $dateObject->format('Y-m-d') : '';
+                            $isMonthlyAccountFee =
+                                str_contains($descriptionLower, 'monthly account fee')
+                                || str_contains($descriptionLower, 'monthly account charge')
+                                || str_starts_with($referenceUpper, 'FEE-');
 
-                                $typeLabel = match($normalizedType) {
-                                    'billpayment' => 'Bill Payment',
-                                    'transfer' => 'Transfer',
-                                    'localbank' => 'Local Bank Transfer',
-                                    'deposit' => 'Deposit',
-                                    'withdrawal' => 'Withdrawal',
-                                    'fee' => 'Monthly Account Fee',
-                                    'internal' => 'Internal Transfer',
-                                    default => ucfirst($normalizedType ?: 'transaction'),
-                                };
+                            $typeLabel = match($normalizedType) {
+                                'billpayment' => 'Bill Payment',
+                                'transfer' => 'Transfer',
+                                'localbank' => 'Local Bank Transfer',
+                                'deposit' => 'Deposit',
+                                'withdrawal' => 'Withdrawal',
+                                'internal' => 'Internal Transfer',
+                                'fee' => $isSavingsWithdrawalFee
+                                    ? 'Withdrawal Fee'
+                                    : ($isMonthlyAccountFee ? 'Monthly Account Fee' : 'Fee'),
+                                default => ucfirst($normalizedType ?: 'transaction'),
+                            };
 
-                                $isCredit = $transactionType === 'deposit' || $transferType === 'deposit';
+                            $beneficiary = $transaction['beneficiaryName']
+                                ?? $transaction['billerName']
+                                ?? ($isSavingsWithdrawalFee ? 'Withdrawal Fee' : null)
+                                ?? ($isMonthlyAccountFee ? 'Monthly Account Fee' : null)
+                                ?? ($transactionType === 'withdrawal' ? 'Cash Withdrawal' : null)
+                                ?? ($transactionType === 'deposit' ? 'Incoming Funds' : '-');
 
-                                $typeSub = 'Acct: ' . $accountNumber;
+                            $reason = $description ?: ($transaction['remarks'] ?? '-');
 
-                                $reasonSub = $transaction['destinationInstitution']
-                                    ?? ($transaction['destinationAccountNumber'] ?? '');
+                            $dateObject = !empty($transaction['transactionDate'])
+                                ? \Carbon\Carbon::parse($transaction['transactionDate'])
+                                : null;
 
-                                $searchBlob = strtolower(trim(
-                                    ($beneficiary ?? '') . ' ' .
-                                    ($reason ?? '') . ' ' .
-                                    ($accountNumber ?? '') . ' ' .
-                                    ($reference ?? '') . ' ' .
-                                    ($transactionType ?? '') . ' ' .
-                                    ($transferType ?? '') . ' ' .
-                                    ($reasonSub ?? '')
-                                ));
-                            @endphp
+                            $displayDate = $dateObject ? $dateObject->format('d/m/Y') : '-';
+                            $dateValue = $dateObject ? $dateObject->format('Y-m-d') : '';
+
+                            $isCredit = $transactionType === 'deposit' || $transferType === 'deposit';
+
+                            $typeSub = 'Acct: ' . $accountNumber;
+
+                            $reasonSub = $transaction['destinationInstitution']
+                                ?? ($transaction['destinationAccountNumber'] ?? '');
+
+                            $searchBlob = strtolower(trim(
+                                ($beneficiary ?? '') . ' ' .
+                                ($reason ?? '') . ' ' .
+                                ($accountNumber ?? '') . ' ' .
+                                ($reference ?? '') . ' ' .
+                                ($transactionType ?? '') . ' ' .
+                                ($transferType ?? '') . ' ' .
+                                ($typeLabel ?? '') . ' ' .
+                                ($reasonSub ?? '')
+                            ));
+                        @endphp
 
                             <tr
                                 class="{{ $index === 0 ? 'highlight' : '' }}"
@@ -667,7 +686,7 @@
                                                 @elseif($normalizedType === 'deposit')
                                                     <path d="M12 4v16"></path>
                                                     <path d="M7 9l5-5 5 5"></path>
-                                                @elseif(in_array($normalizedType, ['withdrawal', 'fee'], true))
+                                                @elseif($normalizedType === 'withdrawal' || $normalizedType === 'fee')
                                                     <path d="M12 4v16"></path>
                                                     <path d="M7 15l5 5 5-5"></path>
                                                 @else

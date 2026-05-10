@@ -926,6 +926,11 @@
                             <span class="menu-text">Loan Applications</span>
                         </a>
 
+                        <a href="{{ route('admin.reports.net-income') }}" class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
+                            <span class="menu-icon">📊</span>
+                            <span class="menu-text">Reports</span>
+                        </a>
+
                         <a href="{{ route('admin.support-tickets.index') }}" class="{{ request()->routeIs('admin.support-tickets.*') ? 'active' : '' }}">
                             <span class="menu-icon">🎧</span>
                             <span class="menu-text">Support Tickets</span>

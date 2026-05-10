@@ -15,11 +15,16 @@ class AccountTransactionMatcher
         }
 
         if (is_numeric($relatedAccount)) {
-            return (int) $relatedAccount === (int) ($account['id'] ?? 0);
+            return (string) $relatedAccount === (string) ($account['id'] ?? '')
+                || (string) $relatedAccount === (string) ($account['accountNumber'] ?? '');
         }
 
         if (! is_array($relatedAccount)) {
             return false;
+        }
+
+        if (array_is_list($relatedAccount)) {
+            return collect($relatedAccount)->contains(fn (mixed $accountRelation): bool => self::matchesAccount($accountRelation, $account));
         }
 
         if (isset($relatedAccount['data']) && is_array($relatedAccount['data'])) {

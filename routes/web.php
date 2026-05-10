@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AdminLoanController;
 use App\Http\Controllers\Admin\AdminNotificationSettingsController;
 use App\Http\Controllers\Admin\AdminSupportTicketController;
 use App\Http\Controllers\Admin\AdminTransactionController;
+use App\Http\Controllers\Admin\NetIncomeReportController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BeneficiaryController;
 use App\Http\Controllers\BillPaymentController;
@@ -40,6 +41,8 @@ Route::middleware(['admin', 'throttle:60,1'])->prefix('admin')->name('admin.')->
     Route::get('/transactions', [AdminTransactionController::class, 'index'])->name('transactions.index');
     Route::get('/transactions/{id}', [AdminTransactionController::class, 'show'])->name('transactions.show');
     Route::get('/loans', [AdminLoanController::class, 'index'])->name('loans.index');
+    Route::get('/reports/net-income', [NetIncomeReportController::class, 'index'])->name('reports.net-income');
+    Route::post('/reports/net-income/generate', [NetIncomeReportController::class, 'generate'])->name('reports.net-income.generate');
     Route::get('/support-tickets', [AdminSupportTicketController::class, 'index'])->name('support-tickets.index');
     Route::get('/support-tickets/{id}', [AdminSupportTicketController::class, 'show'])->name('support-tickets.show');
     Route::patch('/support-tickets/{id}', [AdminSupportTicketController::class, 'update'])->name('support-tickets.update');

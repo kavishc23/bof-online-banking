@@ -61,7 +61,7 @@ class BofService
 
             if ($matchedCustomer && ! empty($matchedCustomer['accounts'])) {
                 $transactionResponse = Http::withToken($jwt)->get(
-                    'http://localhost:1337/api/transactions?populate=*'
+                    'http://localhost:1337/api/transactions?populate=*&sort[0]=transactionDate:desc&pagination[pageSize]=100'
                 );
 
                 $transactionRows = $transactionResponse->json()['data'] ?? [];
@@ -106,20 +106,10 @@ class BofService
      */
     public function transactionBelongsToCustomerAccount(array $transaction, array $account): bool
     {
-        $transactionType = strtolower($transaction['transactionType'] ?? '');
-        $transferType = strtolower($transaction['transferType'] ?? '');
-
-        $isDeposit = $transactionType === 'deposit' || $transferType === 'deposit';
-
-        if ($isDeposit) {
-            return
-                $this->relationMatchesAccount($transaction['account'] ?? null, $account) ||
-                $this->relationMatchesAccount($transaction['destinationAccount'] ?? null, $account);
-        }
-
         return
             $this->relationMatchesAccount($transaction['account'] ?? null, $account) ||
-            $this->relationMatchesAccount($transaction['sourceAccount'] ?? null, $account);
+            $this->relationMatchesAccount($transaction['sourceAccount'] ?? null, $account) ||
+            $this->relationMatchesAccount($transaction['destinationAccount'] ?? null, $account);
     }
 
     /**
@@ -128,14 +118,24 @@ class BofService
     private function relationMatchesAccount(mixed $relation, array $account): bool
     {
         if (is_numeric($relation)) {
-            return (int) $relation === (int) ($account['id'] ?? 0);
+            return (string) $relation === (string) ($account['id'] ?? '')
+                || (string) $relation === (string) ($account['accountNumber'] ?? '');
         }
 
         if (! is_array($relation)) {
             return false;
         }
 
+        if (array_is_list($relation)) {
+            return collect($relation)->contains(fn (mixed $relatedAccount): bool => $this->relationMatchesAccount($relatedAccount, $account));
+        }
+
         $relationData = $relation['data'] ?? $relation;
+
+        if (is_array($relationData) && array_is_list($relationData)) {
+            return collect($relationData)->contains(fn (mixed $relatedAccount): bool => $this->relationMatchesAccount($relatedAccount, $account));
+        }
+
         $relationAttributes = is_array($relationData) ? ($relationData['attributes'] ?? []) : [];
         $relationAccount = is_array($relationData) ? array_merge($relationData, is_array($relationAttributes) ? $relationAttributes : []) : [];
 

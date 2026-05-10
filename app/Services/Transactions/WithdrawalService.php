@@ -19,14 +19,6 @@ class WithdrawalService
         private readonly MonthlyAccountFeeService $monthlyFees,
     ) {}
 
-    /**
-     * Creates a Strapi Withdrawal transaction and updates the selected account balance.
-     *
-     * @param  array<string, mixed>  $validated
-     * @param  array<string, mixed>  $customer
-     * @param  array<string, mixed>  $user
-     * @return array{successful: bool, message: string}
-     */
     public function withdraw(array $validated, array $customer, array $user): array
     {
         try {
@@ -44,19 +36,22 @@ class WithdrawalService
                 ];
             }
 
+            $strapiAccountId = $this->strapiAccountId($account);
+
+            if ($strapiAccountId === null) {
+                return [
+                    'successful' => false,
+                    'message' => 'Selected account is missing its Strapi account id.',
+                ];
+            }
+
+            $accountUpdateIdentifier = $this->strapiAccountUpdateIdentifier($account);
             $amount = (float) $validated['amount'];
             $balance = (float) ($account['balance'] ?? 0);
             $feeAmount = $this->feeForThisWithdrawal($account);
             $totalDebit = $amount + $feeAmount;
 
             if ($totalDebit > $balance) {
-                $this->logger->activity('withdrawal.insufficient_balance', 'Withdrawal rejected because account balance is insufficient.', [
-                    'account_id' => $account['id'] ?? null,
-                    'amount' => $amount,
-                    'fee_amount' => $feeAmount,
-                    'balance' => $balance,
-                ]);
-
                 return [
                     'successful' => false,
                     'message' => $feeAmount > 0
@@ -67,26 +62,24 @@ class WithdrawalService
 
             $newBalance = round($balance - $totalDebit, 2);
             $referenceNumber = $this->referenceNumber();
-            $transactionDate = now()->toISOString();
+
             $withdrawalTransaction = [
                 'referenceNumber' => $referenceNumber,
                 'transactionType' => 'Withdrawal',
                 'transferType' => 'Withdrawal',
                 'amount' => $amount,
-                'transactionDate' => $transactionDate,
+                'transactionDate' => now()->toISOString(),
                 'description' => 'Cash withdrawal',
                 'remarks' => $validated['remarks'] ?? null,
                 'transactionStatus' => 'Completed',
-                'account' => $account['id'],
-                'sourceAccount' => $account['id'],
+                'account' => $strapiAccountId,
             ];
 
-            $transactionResponse = $this->strapi->post('/api/transactions', [
-                'data' => $withdrawalTransaction,
-            ]);
+            $transactionPayload = ['data' => $withdrawalTransaction];
+            $transactionResponse = $this->strapi->post('/api/transactions', $transactionPayload);
 
             if (! $transactionResponse->successful()) {
-                $this->bofService->reportApiFailure('withdrawal_transaction_create', $transactionResponse);
+                $this->logger->apiFailureWithPayload('withdrawal_transaction_create', $transactionResponse, $transactionPayload);
 
                 return [
                     'successful' => false,
@@ -94,10 +87,8 @@ class WithdrawalService
                 ];
             }
 
-            $feeTransaction = null;
-
             if ($feeAmount > 0) {
-                $feeTransaction = $this->createSavingsWithdrawalFeeTransaction($account, $feeAmount);
+                $feeTransaction = $this->createSavingsWithdrawalFeeTransaction($account, $feeAmount, $strapiAccountId);
 
                 if ($feeTransaction === null) {
                     return [
@@ -107,15 +98,25 @@ class WithdrawalService
                 }
             }
 
-            $accountIdentifier = (string) ($account['documentId'] ?? $account['id']);
-            $updateResponse = $this->strapi->put('/api/accounts/'.$accountIdentifier, [
+            $accountUpdateUrl = '/api/accounts/'.$accountUpdateIdentifier;
+            $accountUpdatePayload = [
                 'data' => [
                     'balance' => $newBalance,
                 ],
-            ]);
+            ];
+
+            $updateResponse = $this->strapi->put($accountUpdateUrl, $accountUpdatePayload);
 
             if (! $updateResponse->successful()) {
-                $this->bofService->reportApiFailure('withdrawal_account_balance_update', $updateResponse);
+                $this->logger->apiFailureWithPayload('withdrawal_account_balance_update', $updateResponse, [
+                    'url' => $accountUpdateUrl,
+                    'payload' => $accountUpdatePayload,
+                    'account' => [
+                        'id' => $account['id'] ?? null,
+                        'documentId' => $account['documentId'] ?? null,
+                        'accountNumber' => $account['accountNumber'] ?? null,
+                    ],
+                ]);
 
                 return [
                     'successful' => false,
@@ -123,15 +124,15 @@ class WithdrawalService
                 ];
             }
 
-            $previousTransactions = session('transactions', []);
-
             $this->bofService->refreshCustomerSession((string) session('jwt'), $user);
-            $this->mergeTransactionsIntoSession($account, array_merge($previousTransactions, array_filter([$withdrawalTransaction, $feeTransaction])));
+
             $this->logger->activity('withdrawal.completed', 'Customer withdrawal completed.', [
                 'reference_number' => $referenceNumber,
                 'account_id' => $account['id'] ?? null,
+                'account_type' => $account['accountType'] ?? null,
                 'amount' => $amount,
                 'fee_amount' => $feeAmount,
+                'total_debit' => $totalDebit,
                 'new_balance' => $newBalance,
             ]);
 
@@ -144,7 +145,9 @@ class WithdrawalService
 
             return [
                 'successful' => true,
-                'message' => 'Withdrawal successful.',
+                'message' => $feeAmount > 0
+                    ? 'Withdrawal successful. Savings withdrawal fee was applied.'
+                    : 'Withdrawal successful.',
             ];
         } catch (Throwable $exception) {
             $this->logger->exception($exception, ['operation' => 'withdrawal']);
@@ -167,9 +170,6 @@ class WithdrawalService
         return 'WDL-FEE-'.now()->year.'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * @param  array<string, mixed>  $account
-     */
     private function feeForThisWithdrawal(array $account): float
     {
         if (($account['accountType'] ?? null) !== 'Savings') {
@@ -179,98 +179,78 @@ class WithdrawalService
         $summary = $this->monthlyFees->summary($account, $this->currentTransactions(), now()->format('Y-m'));
         $withdrawalCountBeforeThisWithdrawal = (int) ($summary['withdrawal_count'] ?? 0);
 
-        return $withdrawalCountBeforeThisWithdrawal >= SavingsAccountFee::FREE_MONTHLY_WITHDRAWALS
+        $feeAmount = $withdrawalCountBeforeThisWithdrawal >= SavingsAccountFee::FREE_MONTHLY_WITHDRAWALS
             ? SavingsAccountFee::WITHDRAWAL_FEE
             : 0.0;
+
+        $this->logger->activity('withdrawal.savings_fee_check', 'Savings withdrawal fee check completed.', [
+            'account_id' => $account['id'] ?? null,
+            'account_number' => $account['accountNumber'] ?? null,
+            'account_type' => $account['accountType'] ?? null,
+            'month' => now()->format('Y-m'),
+            'withdrawal_count_before_this_withdrawal' => $withdrawalCountBeforeThisWithdrawal,
+            'free_monthly_withdrawals' => SavingsAccountFee::FREE_MONTHLY_WITHDRAWALS,
+            'fee_amount' => $feeAmount,
+        ]);
+
+        return $feeAmount;
     }
 
-    /**
-     * @return array<int, array<string, mixed>>
-     */
     private function currentTransactions(): array
     {
         return $this->strapi->data($this->strapi->get('/api/transactions', [
             'populate' => '*',
             'sort' => 'transactionDate:desc',
+            'pagination[pageSize]' => 100,
         ]));
     }
 
-    /**
-     * @param  array<string, mixed>  $account
-     */
-    private function createSavingsWithdrawalFeeTransaction(array $account, float $feeAmount): ?array
+    private function createSavingsWithdrawalFeeTransaction(array $account, float $feeAmount, int $strapiAccountId): ?array
     {
         $feeTransaction = [
             'referenceNumber' => $this->feeReferenceNumber(),
-            'transactionType' => 'Withdrawal',
-            'transferType' => 'Withdrawal',
+
+            // Fee transaction type as requested
+            'transactionType' => 'Fee',
+            'transferType' => 'Fee',
+
             'amount' => $feeAmount,
             'transactionDate' => now()->toISOString(),
             'description' => 'Savings withdrawal fee',
             'remarks' => 'FJD 5.00 fee for Savings withdrawal after the first free monthly withdrawal.',
             'transactionStatus' => 'Completed',
-            'account' => $account['id'],
-            'sourceAccount' => $account['id'],
+            'account' => $strapiAccountId,
         ];
 
-        $response = $this->strapi->post('/api/transactions', [
-            'data' => $feeTransaction,
-        ]);
+        $payload = ['data' => $feeTransaction];
+        $response = $this->strapi->post('/api/transactions', $payload);
 
         if (! $response->successful()) {
-            $this->bofService->reportApiFailure('savings_withdrawal_fee_transaction_create', $response);
+            $this->logger->apiFailureWithPayload('savings_withdrawal_fee_transaction_create', $response, $payload);
 
             return null;
         }
 
         $this->logger->activity('withdrawal.savings_fee_applied', 'Savings withdrawal fee transaction created.', [
             'account_id' => $account['id'] ?? null,
+            'account_number' => $account['accountNumber'] ?? null,
             'fee_amount' => $feeAmount,
         ]);
 
         return $feeTransaction;
     }
 
-    /**
-     * Strapi may not immediately return freshly-created relations in the shape
-     * expected by the transaction register, so the service also stores a
-     * display-ready copy in the session after the authoritative API writes.
-     *
-     * @param  array<string, mixed>  $account
-     * @param  array<int, array<string, mixed>>  $transactions
-     */
-    private function mergeTransactionsIntoSession(array $account, array $transactions): void
+    private function strapiAccountId(array $account): ?int
     {
-        $existingTransactions = collect(session('transactions', []))
-            ->keyBy(fn (array $transaction): string => (string) ($transaction['referenceNumber'] ?? uniqid('tx-', true)));
-
-        foreach ($transactions as $transaction) {
-            if ($this->shouldUseSelectedAccountRelation($transaction['account'] ?? null, $account)) {
-                $transaction['account'] = $account;
-            }
-
-            if ($this->shouldUseSelectedAccountRelation($transaction['sourceAccount'] ?? null, $account)) {
-                $transaction['sourceAccount'] = $account;
-            }
-
-            $existingTransactions->put((string) $transaction['referenceNumber'], $transaction);
+        if (! isset($account['id']) || ! is_numeric($account['id'])) {
+            return null;
         }
 
-        session([
-            'transactions' => $existingTransactions
-                ->sortByDesc(fn (array $transaction): string => (string) ($transaction['transactionDate'] ?? ''))
-                ->values()
-                ->all(),
-        ]);
+        return (int) $account['id'];
     }
 
-    /**
-     * @param  array<string, mixed>  $account
-     */
-    private function shouldUseSelectedAccountRelation(mixed $relation, array $account): bool
+    private function strapiAccountUpdateIdentifier(array $account): string
     {
-        return $relation === null
-            || $relation === ''
-            || (is_numeric($relation) && (int) $relation === (int) ($account['id'] ?? 0));
+        return (string) ($account['documentId'] ?? $account['id']);
     }
 }
