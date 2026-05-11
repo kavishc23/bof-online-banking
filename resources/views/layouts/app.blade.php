@@ -1003,6 +1003,11 @@
                             <span class="menu-text">Scheduled Payments</span>
                         </a>
 
+                        <a href="{{ route('credit-cards.index') }}" class="{{ request()->routeIs('credit-cards.*') ? 'active' : '' }}">
+                            <span class="menu-icon">💳</span>
+                            <span class="menu-text">Credit Cards</span>
+                        </a>
+
                         <a href="{{ route('support-chat.index') }}" class="{{ request()->routeIs('support-chat.*') ? 'active' : '' }}">
                             <span class="menu-icon">🎧</span>
                             <span class="menu-text">Live Chat Support</span>

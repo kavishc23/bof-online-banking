@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\NetIncomeReportController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BeneficiaryController;
 use App\Http\Controllers\BillPaymentController;
+use App\Http\Controllers\CreditCardController;
 use App\Http\Controllers\CustomerProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvestmentController;
@@ -64,6 +65,15 @@ Route::middleware(['banking.session', 'throttle:60,1'])->group(function (): void
     Route::post('/beneficiaries', [BeneficiaryController::class, 'store'])->name('beneficiaries.store');
 
     Route::get('/scheduled-payments', [ScheduledPaymentController::class, 'index'])->name('scheduled-payments');
+
+    Route::get('/credit-cards', [CreditCardController::class, 'index'])->name('credit-cards.index');
+    Route::get('/credit-cards/link', [CreditCardController::class, 'link'])->name('credit-cards.link');
+    Route::post('/credit-cards/link', [CreditCardController::class, 'storeLink'])->name('credit-cards.link.store');
+    Route::get('/credit-cards/pay', [CreditCardController::class, 'payment'])->name('credit-cards.pay');
+    Route::post('/credit-cards/pay', [CreditCardController::class, 'pay'])->name('credit-cards.pay.store');
+    Route::get('/credit-cards/transactions', [CreditCardController::class, 'transactions'])->name('credit-cards.transactions');
+    Route::get('/credit-cards/{creditCard}', [CreditCardController::class, 'show'])->name('credit-cards.show');
+    Route::patch('/credit-cards/{creditCard}/freeze', [CreditCardController::class, 'toggleFreeze'])->name('credit-cards.freeze');
 
     Route::get('/support-chat', [SupportChatController::class, 'index'])->name('support-chat.index');
     Route::get('/support-chat/create', [SupportChatController::class, 'create'])->name('support-chat.create');
