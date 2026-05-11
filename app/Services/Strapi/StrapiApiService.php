@@ -46,9 +46,19 @@ class StrapiApiService
 
     private function request(): mixed
     {
+        $apiToken = config('services.strapi.api_token');
+
+        if ($apiToken) {
+            return Http::withToken((string) $apiToken)->acceptJson();
+        }
+
         $jwt = session('jwt');
 
-        return $jwt ? Http::withToken($jwt)->acceptJson() : Http::acceptJson();
+        if ($jwt) {
+            return Http::withToken($jwt)->acceptJson();
+        }
+
+        return Http::acceptJson();
     }
 
     private function url(string $path): string

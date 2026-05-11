@@ -119,7 +119,7 @@ test('money sent disabled does not show a success notification flash', function 
 });
 
 test('bill payments enabled shows sms confirmation in success flash', function () {
-    fakeNotificationToastStrapi('bill_payments', true);
+    fakeNotificationToastStrapi('bill_paid', true);
 
     $response = $this->withSession(notificationToastCustomerSession())->post('/bill-payment', billPaymentPayloadForNotificationToast());
 
@@ -129,7 +129,7 @@ test('bill payments enabled shows sms confirmation in success flash', function (
 });
 
 test('bill payments disabled does not show a success notification flash', function () {
-    fakeNotificationToastStrapi('bill_payments', false);
+    fakeNotificationToastStrapi('bill_paid', false);
 
     $response = $this->withSession(notificationToastCustomerSession())->post('/bill-payment', billPaymentPayloadForNotificationToast());
 

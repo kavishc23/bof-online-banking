@@ -12,8 +12,13 @@ class NotificationSettingsService
         'loan_payment_due',
         'credit_card_transactions',
         'bill_payments',
+        'bill_paid',
         'money_sent',
         'money_received',
+    ];
+
+    public const EVENT_KEY_ALIASES = [
+        'bill_payments' => ['bill_paid'],
     ];
 
     public function __construct(
@@ -42,9 +47,7 @@ class NotificationSettingsService
             return false;
         }
 
-        $setting = $this->strapi->data($this->strapi->get('/api/notification-settings', [
-            'filters[eventKey][$eq]' => $eventKey,
-        ]))[0] ?? null;
+        $setting = $this->findSettingByEventKey($eventKey);
 
         $enabled = (bool) ($setting['enabled'] ?? false);
 
@@ -83,5 +86,28 @@ class NotificationSettingsService
                 ]);
             }
         }
+    }
+
+    /**
+     * Supports newer Strapi records such as bill_paid while keeping older code
+     * that asks for bill_payments working.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function findSettingByEventKey(string $eventKey): ?array
+    {
+        $keys = [$eventKey, ...(self::EVENT_KEY_ALIASES[$eventKey] ?? [])];
+
+        foreach ($keys as $key) {
+            $setting = $this->strapi->data($this->strapi->get('/api/notification-settings', [
+                'filters[eventKey][$eq]' => $key,
+            ]))[0] ?? null;
+
+            if ($setting) {
+                return $setting;
+            }
+        }
+
+        return null;
     }
 }

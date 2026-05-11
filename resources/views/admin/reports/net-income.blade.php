@@ -4,6 +4,7 @@
 @section('subheading', 'Generate a management PDF showing fees collected, interest paid, and net income for a selected period.')
 
 @section('admin-content')
+    {{-- CS415 report input form. Calculation is handled by NetIncomeReportService, not this Blade view. --}}
     <section class="admin-card">
         <form method="POST" action="{{ route('admin.reports.net-income.generate') }}" class="admin-form-grid">
             @csrf
@@ -59,6 +60,7 @@
         </form>
     </section>
 
+    {{-- Short assignment notes shown to the admin before generating the PDF. --}}
     <section class="admin-card">
         <div class="admin-detail-grid">
             <div>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cs415AssignmentNotes>
+    <project>
+        <name>Bank of Fiji Online Banking</name>
+        <stack>
+            <frontend>Laravel Blade</frontend>
+            <backend>Strapi v5 API</backend>
+            <testing>Laravel PHPUnit/Pest</testing>
+            <pdf>barryvdh/laravel-dompdf</pdf>
+        </stack>
+    </project>
+
+    <architecture>
+        <note>Controllers are kept thin and pass validated data to service classes.</note>
+        <note>Business rules are placed in app/Services, especially AccountFees, Transactions, Reports, Notifications, and Support.</note>
+        <note>Blade views display prepared data only and do not perform fee or report calculations.</note>
+        <note>Logging is handled through reusable services such as BankingLogger.</note>
+        <note>Admin routes are protected by AdminMiddleware and session user_role checks.</note>
+    </architecture>
+
+    <accountFees>
+        <rule accountType="SimpleAccess">Flat monthly fee is 0.90.</rule>
+        <rule accountType="Savings">First withdrawal each month is free; every extra monthly withdrawal costs 5.00.</rule>
+        <rule accountType="Business">Monthly maintenance fee is 20.00 when monthly input is less than 2000.00.</rule>
+        <implementation>app/Services/AccountFees</implementation>
+        <tests>tests/Unit/AccountFeeRulesTest.php</tests>
+    </accountFees>
+
+    <withdrawals>
+        <note>Withdrawal transactions are persisted in Strapi with transactionType Withdrawal and transferType Withdrawal.</note>
+        <note>The transaction relation uses the numeric Strapi account id.</note>
+        <note>The account balance update uses the Strapi documentId endpoint when available.</note>
+        <note>Session data is refreshed from Strapi after transaction and balance update success.</note>
+        <implementation>app/Services/Transactions/WithdrawalService.php</implementation>
+        <tests>tests/Feature/WithdrawalFeatureTest.php</tests>
+    </withdrawals>
+
+    <netIncomeReport>
+        <route method="GET">/admin/reports/net-income</route>
+        <route method="POST">/admin/reports/net-income/generate</route>
+        <note>The report calculates fees collected, estimated interest paid, and net income.</note>
+        <note>Fee categories are Monthly Account Fees, Savings Withdrawal Fees, and Other Fees.</note>
+        <note>The PDF is generated from resources/views/admin/reports/net-income-pdf.blade.php.</note>
+        <implementation>app/Services/Reports/NetIncomeReportService.php</implementation>
+        <controller>app/Http/Controllers/Admin/NetIncomeReportController.php</controller>
+        <tests>tests/Feature/NetIncomeReportTest.php</tests>
+    </netIncomeReport>
+
+    <notifications>
+        <note>Admin notification settings are stored in Strapi and checked before customer toast messages are displayed.</note>
+        <note>Disabled events suppress notification toasts; enabled events allow the success confirmation message.</note>
+        <implementation>app/Services/Notifications/NotificationSettingsService.php</implementation>
+        <tests>tests/Feature/NotificationSettingsCs415Test.php</tests>
+    </notifications>
+
+    <supportChat>
+        <note>Customers can create support issues, mark bot replies resolved, request a consultant, and rate resolved tickets.</note>
+        <note>Support chat data is stored in the Strapi support-ticket collection.</note>
+        <implementation>app/Services/Support/CustomerSupportChatService.php</implementation>
+        <tests>tests/Feature/SupportChatLiveChatTest.php</tests>
+    </supportChat>
+
+    <testCommands>
+        <command>php artisan test --compact</command>
+        <command>php artisan test --compact --filter=AccountFeeRulesTest</command>
+        <command>php artisan test --compact --filter=NetIncomeReportTest</command>
+        <command>php artisan test --compact --filter=NotificationSettingsCs415Test</command>
+        <command>php artisan test --compact --filter=SupportChatLiveChatTest</command>
+    </testCommands>
+</cs415AssignmentNotes>

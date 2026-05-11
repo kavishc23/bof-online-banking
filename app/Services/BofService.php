@@ -36,6 +36,15 @@ class BofService
         return back()->withInput()->with('error', $message);
     }
 
+    /**
+     * Loads the logged-in customer and their persisted Strapi transactions.
+     *
+     * This prevents transaction history from depending on temporary session-only
+     * records after logout, refresh, or a new login.
+     *
+     * @param  array<string, mixed>  $user
+     * @return array{customer: array<string, mixed>|null, transactions: array<int, array<string, mixed>>}
+     */
     public function fetchCustomerAndTransactions(string $jwt, array $user): array
     {
         try {
@@ -95,12 +104,19 @@ class BofService
         }
     }
 
+    /**
+     * Checks if a transaction belongs to a specific account id.
+     *
+     * @param  array<string, mixed>  $transaction
+     */
     public function transactionBelongsToAccount(array $transaction, int $accountId): bool
     {
         return $this->transactionBelongsToCustomerAccount($transaction, ['id' => $accountId]);
     }
 
     /**
+     * Matches deposits, withdrawals, transfers, bill payments, and fees to a customer account.
+     *
      * @param  array<string, mixed>  $transaction
      * @param  array<string, mixed>  $account
      */
@@ -113,6 +129,9 @@ class BofService
     }
 
     /**
+     * Handles different Strapi relation formats: numeric ids, account numbers,
+     * nested data/attributes objects, and relation lists.
+     *
      * @param  array<string, mixed>  $account
      */
     private function relationMatchesAccount(mixed $relation, array $account): bool
@@ -145,6 +164,8 @@ class BofService
     }
 
     /**
+     * Normalizes relation data so Blade views can display a consistent account shape.
+     *
      * @param  array<string, mixed>  $transaction
      * @param  array<string, mixed>  $account
      * @return array<string, mixed>
@@ -728,6 +749,11 @@ class BofService
         return null;
     }
 
+    /**
+     * Refreshes account and transaction session data from Strapi after writes.
+     *
+     * @param  array<string, mixed>  $user
+     */
     public function refreshCustomerSession(string $jwt, array $user): void
     {
         $result = $this->fetchCustomerAndTransactions($jwt, $user);

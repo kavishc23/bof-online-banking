@@ -10,6 +10,13 @@ use App\Services\Logging\BankingLogger;
 use App\Services\Strapi\StrapiApiService;
 use Throwable;
 
+/**
+ * Handles the customer withdrawal use case for CS415 Assignment 3.
+ *
+ * The controller only passes validated input into this service. This class owns
+ * the business rules: account ownership, balance checks, Strapi transaction
+ * creation, Savings withdrawal fee creation, balance update, and session refresh.
+ */
 class WithdrawalService
 {
     public function __construct(
@@ -19,6 +26,15 @@ class WithdrawalService
         private readonly MonthlyAccountFeeService $monthlyFees,
     ) {}
 
+    /**
+     * Creates a real Strapi Withdrawal transaction, deducts the account balance,
+     * and refreshes the customer session only after both API writes succeed.
+     *
+     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $customer
+     * @param  array<string, mixed>  $user
+     * @return array{successful: bool, message: string}
+     */
     public function withdraw(array $validated, array $customer, array $user): array
     {
         try {
@@ -160,16 +176,27 @@ class WithdrawalService
         }
     }
 
+    /**
+     * Creates a readable unique reference for the main withdrawal transaction.
+     */
     private function referenceNumber(): string
     {
         return 'WDL-'.now()->year.'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
     }
 
+    /**
+     * Creates a readable unique reference for the Savings withdrawal fee.
+     */
     private function feeReferenceNumber(): string
     {
         return 'WDL-FEE-'.now()->year.'-'.str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
     }
 
+    /**
+     * Checks the existing monthly withdrawal count and returns the extra Savings fee.
+     *
+     * @param  array<string, mixed>  $account
+     */
     private function feeForThisWithdrawal(array $account): float
     {
         if (($account['accountType'] ?? null) !== 'Savings') {
@@ -196,6 +223,12 @@ class WithdrawalService
         return $feeAmount;
     }
 
+    /**
+     * Loads current Strapi transactions so the existing account-fee service can
+     * count withdrawals for the selected month.
+     *
+     * @return array<int, array<string, mixed>>
+     */
     private function currentTransactions(): array
     {
         return $this->strapi->data($this->strapi->get('/api/transactions', [
@@ -205,12 +238,16 @@ class WithdrawalService
         ]));
     }
 
+    /**
+     * Stores the extra Savings withdrawal charge as a Fee transaction in Strapi.
+     *
+     * @param  array<string, mixed>  $account
+     * @return array<string, mixed>|null
+     */
     private function createSavingsWithdrawalFeeTransaction(array $account, float $feeAmount, int $strapiAccountId): ?array
     {
         $feeTransaction = [
             'referenceNumber' => $this->feeReferenceNumber(),
-
-            // Fee transaction type as requested
             'transactionType' => 'Fee',
             'transferType' => 'Fee',
 
@@ -240,6 +277,11 @@ class WithdrawalService
         return $feeTransaction;
     }
 
+    /**
+     * Strapi relations use the numeric account id, not the visible account number.
+     *
+     * @param  array<string, mixed>  $account
+     */
     private function strapiAccountId(array $account): ?int
     {
         if (! isset($account['id']) || ! is_numeric($account['id'])) {
@@ -249,6 +291,11 @@ class WithdrawalService
         return (int) $account['id'];
     }
 
+    /**
+     * This Strapi v5 project updates account records through documentId URLs.
+     *
+     * @param  array<string, mixed>  $account
+     */
     private function strapiAccountUpdateIdentifier(array $account): string
     {
         return (string) ($account['documentId'] ?? $account['id']);

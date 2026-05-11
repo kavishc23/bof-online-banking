@@ -5,6 +5,12 @@ namespace App\Services\Reports;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
+/**
+ * Builds the CS415 management net income report from Strapi data.
+ *
+ * This service keeps report calculations out of controllers and Blade files.
+ * It returns a simple array that the PDF view can display directly.
+ */
 class NetIncomeReportService
 {
     /**
@@ -132,6 +138,11 @@ class NetIncomeReportService
     }
 
     /**
+     * @param  array<string, mixed>  $transaction
+     */
+    /**
+     * Converts raw Strapi transaction fields into the report fee categories.
+     *
      * @param  array<string, mixed>  $transaction
      */
     public function detectFeeCategory(array $transaction): string

@@ -13,6 +13,13 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
+/**
+ * Admin-only controller for the CS415 Net Income PDF Report.
+ *
+ * The controller stays thin: it validates inputs, fetches Strapi records,
+ * delegates all calculations to NetIncomeReportService, and sends the prepared
+ * report data to DomPDF for download.
+ */
 class NetIncomeReportController extends Controller
 {
     public function __construct(
@@ -21,11 +28,17 @@ class NetIncomeReportController extends Controller
         private readonly BankingLogger $logger,
     ) {}
 
+    /**
+     * Shows the report input form inside the admin portal.
+     */
     public function index(): View
     {
         return view('admin.reports.net-income');
     }
 
+    /**
+     * Validates the report request, prepares report data, and downloads the PDF.
+     */
     public function generate(Request $request): Response|RedirectResponse
     {
         $validated = $request->validate([

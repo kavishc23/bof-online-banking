@@ -2,6 +2,13 @@
 
 namespace App\Services\AccountFees;
 
+/**
+ * Matches Strapi transaction relations back to a local account array.
+ *
+ * Strapi can return relations as numeric ids, document ids, account numbers,
+ * nested data/attributes arrays, or lists. This helper keeps that matching
+ * logic reusable for fee calculations and transaction filtering.
+ */
 class AccountTransactionMatcher
 {
     /**

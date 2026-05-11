@@ -32,6 +32,8 @@ function feeTransaction(array $overrides = []): array
 
 function fakeFeeStrapi(array $accounts, array $transactions = []): void
 {
+    config(['services.strapi.api_token' => 'test-strapi-api-token']);
+
     Http::fake([
         '*localhost:1337/api/accounts*' => Http::response(['data' => $accounts]),
         '*localhost:1337/api/transactions*' => Http::response(['data' => $transactions]),
@@ -63,7 +65,7 @@ function feeCustomerSession(): array
 test('monthly fee command exists', function () {
     fakeFeeStrapi([]);
 
-    $this->artisan('accounts:charge-monthly-fees')
+    $this->artisan('charge-monthly-fees')
         ->expectsOutput('Starting monthly account fee deduction...')
         ->assertSuccessful();
 });
@@ -72,7 +74,7 @@ test('access account on billing day charges flat monthly fee', function () {
     Carbon::setTestNow('2026-05-10 09:00:00');
     fakeFeeStrapi([feeAccount()]);
 
-    $this->artisan('accounts:charge-monthly-fees')->assertSuccessful();
+    $this->artisan('charge-monthly-fees')->assertSuccessful();
 
     Http::assertSent(fn ($request): bool => $request->method() === 'POST'
         && str_contains($request->url(), '/api/transactions')
@@ -87,6 +89,18 @@ test('access account on billing day charges flat monthly fee', function () {
         && (float) $request['data']['balance'] === 99.10);
 
     Carbon::setTestNow();
+});
+
+test('monthly fee command stops safely when strapi api token is missing', function () {
+    config(['services.strapi.api_token' => null]);
+    Http::fake();
+
+    $this->artisan('charge-monthly-fees')
+        ->expectsOutput('Starting monthly account fee deduction...')
+        ->expectsOutput('STRAPI_API_TOKEN is missing. Add it to .env and run php artisan config:clear before running scheduled fee deductions.')
+        ->assertFailed();
+
+    Http::assertNothingSent();
 });
 
 test('savings account with one withdrawal has zero monthly fee', function () {

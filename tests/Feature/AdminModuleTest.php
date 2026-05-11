@@ -134,6 +134,14 @@ function fakeAdminStrapi(): void
                     'enabled' => true,
                     'description' => 'Notify customers when money is sent.',
                 ],
+                [
+                    'id' => 22,
+                    'documentId' => 'notification-22',
+                    'eventKey' => 'bill_paid',
+                    'eventLabel' => 'Bill Paid',
+                    'enabled' => true,
+                    'description' => 'Notify customers when a bill is paid.',
+                ],
             ],
         ]),
         '*localhost:1337/api/chatbot-faqs*' => Http::response([
@@ -248,6 +256,7 @@ test('admin can view notification settings', function () {
 
     $response->assertOk();
     $response->assertSee('Money Sent');
+    $response->assertSee('Bill Paid');
 });
 
 test('admin can update notification setting', function () {

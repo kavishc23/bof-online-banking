@@ -16,7 +16,7 @@
                         $group = match ($eventKey) {
                             'loan_payment_due' => 'Loans',
                             'credit_card_transactions' => 'Cards',
-                            'bill_payments' => 'Payments',
+                            'bill_payments', 'bill_paid' => 'Payments',
                             'money_sent', 'money_received' => 'Transfers',
                             default => 'General',
                         };

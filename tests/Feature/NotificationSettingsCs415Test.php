@@ -48,8 +48,8 @@ function cs415FakeNotificationSettings(bool $moneySentEnabled, bool $billPayment
                 [
                     'id' => 42,
                     'documentId' => 'notification-bill',
-                    'eventKey' => 'bill_payments',
-                    'eventLabel' => 'Bill Payments',
+                    'eventKey' => 'bill_paid',
+                    'eventLabel' => 'Bill Paid',
                     'enabled' => $billPaymentsEnabled,
                 ],
             ],
@@ -99,7 +99,7 @@ test('CS415 notification settings: admin can enable and disable notification ser
     $response = $this->withSession(cs415NotificationAdminSession())->patch('/admin/notification-settings', [
         'settings' => [
             'money_sent' => '0',
-            'bill_payments' => '1',
+            'bill_paid' => '1',
         ],
     ]);
 
